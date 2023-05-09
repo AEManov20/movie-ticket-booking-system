@@ -28,7 +28,13 @@ class UserPost extends StatelessWidget {
               child: Row(
                 children: [
                   CircleAvatar(
-                      child: Text(firstName[0].toUpperCase().toString())),
+                    backgroundColor: accentColor,
+                    foregroundColor: accentColor.computeLuminance() >= .5
+                        ? Colors.black
+                        : Colors.white,
+                    child: Text(firstName[0].toUpperCase().toString(),
+                        style: const TextStyle(fontWeight: FontWeight.w500)),
+                  ),
                   Container(
                       margin: const EdgeInsets.fromLTRB(15.0, 0.0, 0.0, 0.0),
                       child: Column(
