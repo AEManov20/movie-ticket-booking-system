@@ -1,34 +1,38 @@
-use core::panic;
-mod user;
+mod auth_handler;
+mod model;
+mod password;
+mod schema;
+mod vars;
+mod util;
+mod services;
 
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
-use sqlx::mssql::MssqlPoolOptions;
+use services::{user::UserService, movie::MovieService, theatre::TheatreService};
+use util::{get_connection_pool, hash_mock_passwords};
 
 async fn root_response() -> impl Responder {
     HttpResponse::Ok().body("*wind noises*")
 }
 
 #[actix_web::main]
-async fn main() -> std::io::Result<()> {
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv::dotenv().ok();
-    let db_url = std::env::var("DATABASE_URL")
-        .expect("DATABASE_URL must be present in environment vars");
 
-    let pool = MssqlPoolOptions::new()
-        .max_connections(5)
-        .connect(db_url.as_str())
-        .await;
+    let pool = get_connection_pool();
 
-    let pool = match pool {
-        Ok(p) => p,
-        Err(e) => {
-            println!("{:?}", e);
-            panic!();
-        }
-    };
+    let user_service = UserService::new(pool.clone());
+    // let movie_service = MovieService::new(pool.clone());
+    // let theatre_service = TheatreService::new(pool.clone());
 
-    HttpServer::new(|| App::new().route("/", web::get().to(root_response)))
-        .bind(("127.0.0.1", 8080))?
-        .run()
-        .await
+    // HttpServer::new(move || {
+    //     App::new()
+    //         // .app_data(web::Data::new(pool.clone()))
+    //         .route("/", web::get().to(root_response))
+    //         .service(web::scope("/api"))
+    // })
+    // .bind(("127.0.0.1", 8080))?
+    // .run()
+    // .await?;
+
+    Ok(())
 }
