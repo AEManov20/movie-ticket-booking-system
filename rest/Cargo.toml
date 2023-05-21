@@ -7,5 +7,15 @@ edition = "2021"
 
 [dependencies]
 actix-web = "4"
-dotenv = "0.15.0"
-sqlx = { version = "0.6", features = [ "runtime-actix-rustls", "mssql", "chrono", "json" ] }
+argon2 = "0.5"
+dotenv = "0.15"
+diesel = { version = "2.0", features = ["postgres", "chrono", "uuid", "serde_json", "r2d2"] }
+deadpool-diesel = { version = "0.4.1", features = ["postgres", "rt_tokio_1", "serde"] }
+
+chrono = { version = "0.4", features = ["serde"] }
+serde = { version = "1.0", features = ["derive"] }
+rayon = "1.7.0"
+uuid = { version = "1.3.3", features = ["serde"] }
+serde_json = "1.0.96"
+jsonwebtoken = "8.3.0"
+casey = "0.4.0"
