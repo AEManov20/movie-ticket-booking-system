@@ -2,11 +2,10 @@
 
 CREATE TABLE movie_reviews (
     "id" INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    author_user_id INTEGER NOT NULL,
-    movie_id INTEGER NOT NULL,
+    author_user_id INTEGER NOT NULL REFERENCES users("id"),
+    movie_id INTEGER NOT NULL REFERENCES movies("id"),
     "content" VARCHAR(2500),
     rating FLOAT NOT NULL,
-
-    CONSTRAINT fk_movie_reviews_users FOREIGN KEY(author_user_id) REFERENCES users("id"),
-    CONSTRAINT fk_movie_reviews_movies FOREIGN KEY(movie_id) REFERENCES movies("id")
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    votes INTEGER NOT NULL DEFAULT 0
 );
