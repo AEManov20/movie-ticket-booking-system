@@ -1,13 +1,25 @@
-use chrono::Utc;
+use std::future::{Ready, ready};
+use std::pin::Pin;
+
+use crate::handlers::ErrorResponse;
+use crate::util::JWT_ALGO;
 use deadpool_diesel::postgres::{Manager, Pool};
 use diesel::associations::HasTable;
 use diesel::prelude::*;
 use diesel::result::Error::NotFound;
-use jsonwebtoken::Header;
+use jsonwebtoken::Validation;
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header};
+use serde::Serialize;
 
 use crate::model::*;
 use crate::password;
+use crate::vars::{jwt_email_secret, jwt_ticket_secret, jwt_user_secret};
 
+pub const EMAIL_CONFIRMATION_TOKEN_EXPIRY_DAYS: i64 = 1;
+pub const USER_TOKEN_EXPIRY_DAYS: i64 = 2;
+pub const USER_REFRESH_TOKEN_EXPIRY_DAYS: i64 = 10;
+
+#[derive(Clone)]
 pub struct UserService {
     pool: Pool,
 }
@@ -56,9 +68,30 @@ impl UserService {
         }
     }
 
-    pub async fn get_by_username(
+    pub async fn get_by_email(
         &self,
-        username_: String,
+        email_: String,
+    ) -> Result<Option<UserResource>, Box<dyn std::error::Error>> {
+        use crate::schema::users::dsl::*;
+
+        let conn = self.pool.get().await?;
+
+        let result = conn
+            .interact(|conn| users.limit(1).filter(email.eq(email_)).load::<User>(conn))
+            .await??
+            .first()
+            .cloned();
+
+        match result {
+            Some(user) => Ok(Some(UserResource::new(user, self.pool.clone()))),
+            None => Ok(None),
+        }
+    }
+
+    pub async fn get_by_email_or_username(
+        &self,
+        email_: Option<String>,
+        username_: Option<String>,
     ) -> Result<Option<UserResource>, Box<dyn std::error::Error>> {
         use crate::schema::users::dsl::*;
 
@@ -66,10 +99,17 @@ impl UserService {
 
         let result = conn
             .interact(|conn| {
-                users
-                    .filter(username.eq(username_))
-                    .limit(1)
-                    .load::<User>(conn)
+                let mut query = users.limit(1).into_boxed();
+
+                if let Some(email_) = email_ {
+                    query = query.or_filter(email.eq(email_));
+                }
+
+                if let Some(username_) = username_ {
+                    query = query.or_filter(username.eq(username_));
+                }
+
+                query.load::<User>(conn)
             })
             .await??
             .first()
@@ -83,7 +123,7 @@ impl UserService {
 
     pub async fn get_by_id(
         &self,
-        id_: i32,
+        id_: uuid::Uuid,
     ) -> Result<Option<UserResource>, Box<dyn std::error::Error>> {
         use crate::schema::users::dsl::*;
 
@@ -101,7 +141,7 @@ impl UserService {
         }
     }
 
-    pub async fn delete(&self, id_: i32) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn delete(&self, id_: uuid::Uuid) -> Result<(), Box<dyn std::error::Error>> {
         use crate::schema::users::dsl::*;
 
         self.pool
@@ -119,6 +159,13 @@ impl UserService {
     }
 }
 
+#[derive(Serialize)]
+pub struct LoginResponse {
+    token: String,
+    refresh_token: String,
+}
+
+#[derive(Clone)]
 pub struct UserResource {
     user: User,
     pool: Pool,
@@ -129,8 +176,98 @@ impl UserResource {
         Self { user, pool }
     }
 
+    pub fn create_jwt(&self) -> jsonwebtoken::errors::Result<LoginResponse> {
+        let token = encode(
+            &Header::new(*JWT_ALGO),
+            &JwtClaims {
+                dat: JwtType::User(self.user.id),
+                sub: self.user.id,
+                iat: (chrono::Utc::now()).timestamp(),
+                exp: (chrono::Utc::now() + chrono::Duration::days(USER_TOKEN_EXPIRY_DAYS))
+                    .timestamp(),
+            },
+            &EncodingKey::from_secret(jwt_user_secret().as_bytes()),
+        )?;
+
+        let refresh_token = encode(
+            &Header::new(*JWT_ALGO),
+            &JwtClaims {
+                dat: JwtType::Refresh(self.user.id),
+                sub: self.user.id,
+                iat: chrono::Utc::now().timestamp(),
+                exp: (chrono::Utc::now() + chrono::Duration::days(USER_REFRESH_TOKEN_EXPIRY_DAYS))
+                    .timestamp(),
+            },
+            &EncodingKey::from_secret(jwt_user_secret().as_bytes()),
+        )?;
+
+        Ok(LoginResponse {
+            token,
+            refresh_token,
+        })
+    }
+
+    pub fn verify_user_jwt(user_jwt: &str) -> Option<JwtClaims> {
+        let data = decode::<JwtClaims>(
+            user_jwt,
+            &DecodingKey::from_secret(jwt_user_secret().as_bytes()),
+            &Validation::new(*JWT_ALGO),
+        );
+
+        if let Ok(data) = data {
+            Some(data.claims)
+        } else {
+            None
+        }
+    }
+
+    pub fn create_email_jwt(&self) -> jsonwebtoken::errors::Result<String> {
+        jsonwebtoken::encode(
+            &Header::new(*JWT_ALGO),
+            &JwtClaims {
+                dat: JwtType::Email(self.user.id),
+                sub: self.user.id,
+                iat: chrono::Utc::now().timestamp(),
+                exp: (chrono::Utc::now()
+                    + chrono::Duration::days(EMAIL_CONFIRMATION_TOKEN_EXPIRY_DAYS))
+                .timestamp(),
+            },
+            &EncodingKey::from_secret(jwt_email_secret().as_ref()),
+        )
+    }
+
+    pub fn verify_email_jwt(email_jwt: &str) -> Option<JwtClaims> {
+        let data = decode::<JwtClaims>(
+            email_jwt,
+            &DecodingKey::from_secret(jwt_email_secret().as_bytes()),
+            &Validation::new(*JWT_ALGO),
+        );
+
+        match data {
+            Ok(v) => Some(v.claims),
+            Err(_) => None,
+        }
+    }
+
+    pub async fn activate(&self) -> Result<(), Box<dyn std::error::Error>> {
+        use crate::schema::users::dsl::*;
+
+        let conn = self.pool.get().await?;
+        let user = self.user.clone();
+
+        conn.interact(move |conn| {
+            diesel::update(users)
+                .filter(id.eq(user.id))
+                .set(is_activated.eq(true))
+                .execute(conn)
+        })
+        .await??;
+
+        Ok(())
+    }
+
     pub async fn get_theatre_permissions(
-        &mut self,
+        &self,
     ) -> Result<Vec<TheatrePermission>, Box<dyn std::error::Error>> {
         let conn = self.pool.get().await?;
 
@@ -143,7 +280,7 @@ impl UserResource {
 
     pub async fn create_theatre_permission(
         &self,
-        theatre_id: i32,
+        theatre_id: uuid::Uuid,
         can_check_tickets: bool,
         can_manage_movies: bool,
         can_manage_tickets: bool,
@@ -175,7 +312,7 @@ impl UserResource {
 
     pub async fn update_theatre_permission(
         &self,
-        id_: i32,
+        theatre_id_: uuid::Uuid,
         can_check_tickets: bool,
         can_manage_movies: bool,
         can_manage_tickets: bool,
@@ -192,10 +329,13 @@ impl UserResource {
             is_theatre_owner,
         };
 
+        let user = self.user.clone();
+
         Ok(conn
             .interact(move |conn| {
                 diesel::update(TheatrePermission::table())
-                    .filter(crate::schema::theatre_permissions::dsl::id.eq(id_))
+                    .filter(crate::schema::theatre_permissions::dsl::user_id.eq(user.id))
+                    .filter(crate::schema::theatre_permissions::dsl::theatre_id.eq(theatre_id_))
                     .set(update)
                     .load(conn)
             })
@@ -205,8 +345,8 @@ impl UserResource {
     }
 
     pub async fn delete_theatre_permission(
-        &mut self,
-        id_: i32,
+        &self,
+        theatre_id_: uuid::Uuid,
     ) -> Result<(), Box<dyn std::error::Error>> {
         use crate::schema::theatre_permissions::dsl::*;
 
@@ -214,7 +354,7 @@ impl UserResource {
 
         conn.interact(move |conn| {
             diesel::delete(theatre_permissions)
-                .filter(id.eq(id_))
+                .filter(theatre_id.eq(theatre_id_))
                 .execute(conn)
         })
         .await??;
@@ -264,7 +404,7 @@ impl UserResource {
         let user = self.user.clone();
 
         fn insert_password(
-            id_: i32,
+            id_: uuid::Uuid,
             pass: &[u8],
             conn: &mut PgConnection,
         ) -> QueryResult<Option<User>> {
@@ -312,7 +452,7 @@ impl UserResource {
         }
     }
 
-    pub async fn get_tickets(&mut self) -> Result<Vec<TicketResource>, Box<dyn std::error::Error>> {
+    pub async fn get_tickets(&self) -> Result<Vec<TicketResource>, Box<dyn std::error::Error>> {
         let conn = self.pool.get().await?;
         let cloned_user = self.user.clone();
 
@@ -325,22 +465,20 @@ impl UserResource {
     }
 
     pub async fn create_ticket(
-        &mut self,
-        issuer_user_id: Option<i32>,
-        expires_at: chrono::NaiveDateTime,
-        theatre_movie_id: i32,
-        ticket_type_id: i32,
+        &self,
+        issuer_user_id: uuid::Uuid,
+        theatre_movie_id: uuid::Uuid,
+        ticket_type_id: uuid::Uuid,
         seat_row: i32,
         seat_column: i32,
     ) -> Result<Option<TicketResource>, Box<dyn std::error::Error>> {
         let conn = self.pool.get().await?;
 
-        let ticket = FormTicket {
+        let ticket = CreateTicket {
             owner_user_id: self.user.id,
             theatre_movie_id,
             ticket_type_id,
             issuer_user_id,
-            expires_at,
             seat_row,
             seat_column,
         };
@@ -361,7 +499,7 @@ impl UserResource {
         }
     }
 
-    pub async fn delete_ticket(&mut self, id_: i32) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn delete_ticket(&self, id_: uuid::Uuid) -> Result<(), Box<dyn std::error::Error>> {
         use crate::schema::tickets::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -372,7 +510,7 @@ impl UserResource {
         Ok(())
     }
 
-    pub async fn get_reviews(&mut self) -> Result<Vec<MovieReview>, Box<dyn std::error::Error>> {
+    pub async fn get_reviews(&self) -> Result<Vec<MovieReview>, Box<dyn std::error::Error>> {
         let conn = self.pool.get().await?;
         let cloned_user = self.user.clone();
 
@@ -382,14 +520,14 @@ impl UserResource {
     }
 
     pub async fn create_review(
-        &mut self,
+        &self,
         content: Option<String>,
         rating: f64,
-        movie_id: i32,
+        movie_id: uuid::Uuid,
     ) -> Result<Option<MovieReview>, Box<dyn std::error::Error>> {
         let conn = self.pool.get().await?;
 
-        let review = FormMovieReview {
+        let review = CreateMovieReview {
             author_user_id: self.user.id,
             content,
             rating,
@@ -408,8 +546,8 @@ impl UserResource {
     }
 
     pub async fn update_review(
-        &mut self,
-        id_: i32,
+        &self,
+        id_: uuid::Uuid,
         content_: Option<String>,
         rating_: f64,
     ) -> Result<Option<MovieReview>, Box<dyn std::error::Error>> {
@@ -431,7 +569,7 @@ impl UserResource {
             .cloned())
     }
 
-    pub async fn delete_review(&mut self, id_: i32) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn delete_review(&self, id_: uuid::Uuid) -> Result<(), Box<dyn std::error::Error>> {
         use crate::schema::movie_reviews::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -463,15 +601,29 @@ impl TicketResource {
         let claims = JwtClaims {
             dat: JwtType::Ticket(self.ticket.id),
             sub: self.ticket.owner_user_id,
-            iss: self.ticket.issuer_user_id,
-            iat: Utc::now().timestamp(),
+            iat: self.ticket.issued_at.timestamp(),
+            exp: self.ticket.expires_at.timestamp(),
         };
 
         jsonwebtoken::encode(
             &Header::default(),
             &claims,
-            &jsonwebtoken::EncodingKey::from_secret(crate::vars::jwt_ticket_secret().as_bytes()),
+            &jsonwebtoken::EncodingKey::from_secret(jwt_ticket_secret().as_bytes()),
         )
+    }
+
+    pub fn verify_jwt(jwt: &str) -> Option<JwtClaims> {
+        let data = decode::<JwtClaims>(
+            jwt,
+            &DecodingKey::from_secret(jwt_ticket_secret().as_bytes()),
+            &Validation::new(*JWT_ALGO),
+        );
+
+        if let Ok(data) = data {
+            Some(data.claims)
+        } else {
+            None
+        }
     }
 
     async fn set_usage(&self, state: bool) -> Result<(), Box<dyn std::error::Error>> {

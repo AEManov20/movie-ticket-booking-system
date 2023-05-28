@@ -1,11 +1,11 @@
 -- Your SQL goes here
 
 CREATE TABLE IF NOT EXISTS tickets (
-    "id" INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    owner_user_id INTEGER NOT NULL REFERENCES users("id"),
-    theatre_movie_id INTEGER NOT NULL REFERENCES theatre_movies("id"),
-    ticket_type_id INTEGER NOT NULL,
-    issuer_user_id INTEGER NOT NULL,
+    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    owner_user_id UUID NOT NULL REFERENCES users("id"),
+    theatre_movie_id UUID NOT NULL REFERENCES theatre_movies("id"),
+    ticket_type_id UUID NOT NULL,
+    issuer_user_id UUID NOT NULL,
     seat_row INTEGER NOT NULL,
     seat_column INTEGER NOT NULL,
     issued_at TIMESTAMP NOT NULL DEFAULT now(),

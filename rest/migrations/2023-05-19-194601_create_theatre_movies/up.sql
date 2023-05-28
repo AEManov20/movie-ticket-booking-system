@@ -1,9 +1,10 @@
 -- Your SQL goes here
 
 CREATE TABLE IF NOT EXISTS theatre_movies (
-    "id" INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    movie_id INTEGER NOT NULL REFERENCES movies("id"),
-    hall_id INTEGER NOT NULL REFERENCES halls("id"),
+    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    movie_id UUID NOT NULL REFERENCES movies("id"),
+    theatre_id UUID NOT NULL REFERENCES theatres("id"),
+    hall_id UUID NOT NULL REFERENCES halls("id"),
     subtitles_language VARCHAR(50),
     audio_language VARCHAR(50) NOT NULL,
     starting_time TIMESTAMP NOT NULL,

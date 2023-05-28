@@ -1,49 +1,44 @@
 // @generated automatically by Diesel CLI.
 
 diesel::table! {
-    email_confirmations (id) {
-        id -> Int4,
-        key -> Varchar,
-        user_id -> Int4,
-    }
-}
-
-diesel::table! {
     external_credentials (id) {
-        id -> Int4,
+        id -> Uuid,
         provider -> Varchar,
         external_id -> Varchar,
-        user_id -> Int4,
+        user_id -> Uuid,
     }
 }
 
 diesel::table! {
     halls (id) {
-        id -> Int4,
+        id -> Uuid,
         number -> Int4,
-        theatre_id -> Int4,
+        theatre_id -> Uuid,
         seat_data -> Json,
     }
 }
 
 diesel::table! {
     movie_reviews (id) {
-        id -> Int4,
-        author_user_id -> Int4,
-        movie_id -> Int4,
+        id -> Uuid,
+        author_user_id -> Uuid,
+        movie_id -> Uuid,
         content -> Nullable<Varchar>,
         rating -> Float8,
+        created_at -> Timestamp,
+        votes -> Int4,
     }
 }
 
 diesel::table! {
     movies (id) {
-        id -> Int4,
+        id -> Uuid,
         name -> Varchar,
         description -> Text,
         genre -> Varchar,
         release_date -> Date,
         length -> Float8,
+        votes -> Int4,
         imdb_link -> Nullable<Varchar>,
         is_deleted -> Bool,
     }
@@ -51,20 +46,21 @@ diesel::table! {
 
 diesel::table! {
     theatre_movies (id) {
-        id -> Int4,
-        movie_id -> Int4,
-        hall_id -> Int4,
+        id -> Uuid,
+        movie_id -> Uuid,
+        theatre_id -> Uuid,
+        hall_id -> Uuid,
         subtitles_language -> Nullable<Varchar>,
         audio_language -> Varchar,
         starting_time -> Timestamp,
+        status -> Int4,
     }
 }
 
 diesel::table! {
-    theatre_permissions (id) {
-        id -> Int4,
-        user_id -> Int4,
-        theatre_id -> Int4,
+    theatre_permissions (user_id, theatre_id) {
+        user_id -> Uuid,
+        theatre_id -> Uuid,
         can_manage_users -> Bool,
         can_manage_movies -> Bool,
         can_check_tickets -> Bool,
@@ -75,7 +71,7 @@ diesel::table! {
 
 diesel::table! {
     theatres (id) {
-        id -> Int4,
+        id -> Uuid,
         name -> Varchar,
         location_lat -> Float8,
         location_lon -> Float8,
@@ -85,12 +81,12 @@ diesel::table! {
 
 diesel::table! {
     ticket_types (id) {
-        id -> Int4,
+        id -> Uuid,
         #[sql_name = "type"]
         type_ -> Varchar,
         movie_type -> Varchar,
         description -> Nullable<Varchar>,
-        theatre_id -> Int4,
+        theatre_id -> Uuid,
         currency -> Varchar,
         price -> Float8,
     }
@@ -98,13 +94,14 @@ diesel::table! {
 
 diesel::table! {
     tickets (id) {
-        id -> Int4,
-        owner_user_id -> Int4,
-        theatre_movie_id -> Int4,
-        ticket_type_id -> Int4,
-        issuer_user_id -> Nullable<Int4>,
+        id -> Uuid,
+        owner_user_id -> Uuid,
+        theatre_movie_id -> Uuid,
+        ticket_type_id -> Uuid,
+        issuer_user_id -> Uuid,
         seat_row -> Int4,
         seat_column -> Int4,
+        issued_at -> Timestamp,
         expires_at -> Timestamp,
         used -> Bool,
     }
@@ -112,25 +109,26 @@ diesel::table! {
 
 diesel::table! {
     users (id) {
-        id -> Int4,
+        id -> Uuid,
         first_name -> Varchar,
         last_name -> Varchar,
         email -> Varchar,
         username -> Varchar,
         password_hash -> Nullable<Varchar>,
+        created_at -> Timestamp,
         is_super_user -> Bool,
         is_activated -> Bool,
         is_deleted -> Bool,
     }
 }
 
-diesel::joinable!(email_confirmations -> users (user_id));
 diesel::joinable!(external_credentials -> users (user_id));
 diesel::joinable!(halls -> theatres (theatre_id));
 diesel::joinable!(movie_reviews -> movies (movie_id));
 diesel::joinable!(movie_reviews -> users (author_user_id));
 diesel::joinable!(theatre_movies -> halls (hall_id));
 diesel::joinable!(theatre_movies -> movies (movie_id));
+diesel::joinable!(theatre_movies -> theatres (theatre_id));
 diesel::joinable!(theatre_permissions -> theatres (theatre_id));
 diesel::joinable!(theatre_permissions -> users (user_id));
 diesel::joinable!(ticket_types -> theatres (theatre_id));
@@ -139,7 +137,6 @@ diesel::joinable!(tickets -> ticket_types (ticket_type_id));
 diesel::joinable!(tickets -> users (owner_user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
-    email_confirmations,
     external_credentials,
     halls,
     movie_reviews,

@@ -1,7 +1,7 @@
 -- Your SQL goes here
 
 CREATE TABLE IF NOT EXISTS movies (
-    "id" INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "name" VARCHAR(250) NOT NULL UNIQUE,
     "description" TEXT NOT NULL,
     genre VARCHAR(250) NOT NULL,

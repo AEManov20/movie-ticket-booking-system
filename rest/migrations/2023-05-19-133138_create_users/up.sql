@@ -1,7 +1,7 @@
 -- Your SQL goes here
 
 CREATE TABLE IF NOT EXISTS users (
-    "id" INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     first_name VARCHAR(50) NOT NULL,
     last_name VARCHAR(50) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
