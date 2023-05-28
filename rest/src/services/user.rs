@@ -1,4 +1,4 @@
-use std::future::{Ready, ready};
+use std::future::{ready, Ready};
 use std::pin::Pin;
 
 use crate::handlers::ErrorResponse;
@@ -270,12 +270,31 @@ impl UserResource {
         &self,
     ) -> Result<Vec<TheatrePermission>, Box<dyn std::error::Error>> {
         let conn = self.pool.get().await?;
-
         let user = self.user.clone();
 
         Ok(conn
             .interact(move |conn| TheatrePermission::belonging_to(&user).load(conn))
             .await??)
+    }
+
+    pub async fn get_theatre_permission(
+        &self,
+        theatre_id_: uuid::Uuid,
+    ) -> Result<Option<TheatrePermission>, Box<dyn std::error::Error>> {
+        use crate::schema::theatre_permissions::dsl::*;
+
+        let conn = self.pool.get().await?;
+        let user = self.user.clone();
+
+        Ok(conn
+            .interact(move |conn| {
+                TheatrePermission::belonging_to(&user)
+                    .filter(theatre_id.eq(theatre_id_))
+                    .load(conn)
+            })
+            .await??
+            .first()
+            .cloned())
     }
 
     pub async fn create_theatre_permission(

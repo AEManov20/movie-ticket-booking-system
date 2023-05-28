@@ -5,6 +5,11 @@ use diesel::PgConnection;
 use deadpool_diesel::postgres::{Runtime, Manager, Pool};
 use rayon::prelude::*;
 use diesel::connection::DefaultLoadingMode;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    pub static ref JWT_ALGO: jsonwebtoken::Algorithm = jsonwebtoken::Algorithm::default();
+}
 
 pub fn hash_mock_passwords(conn: &mut PgConnection) {
     use crate::model::User;

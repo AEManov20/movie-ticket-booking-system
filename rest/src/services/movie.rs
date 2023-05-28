@@ -5,17 +5,11 @@ use serde::Deserialize;
 use crate::model::*;
 use crate::password;
 
+use super::SortBy;
+
 #[derive(Clone)]
 pub struct MovieService {
     pool: Pool,
-}
-
-#[derive(Deserialize, Copy, Clone)]
-pub enum SortBy {
-    #[serde(alias = "newest")]
-    Newest,
-    #[serde(alias = "oldest")]
-    Oldest,
 }
 
 impl MovieService {
@@ -38,7 +32,10 @@ impl MovieService {
             .cloned())
     }
 
-    pub async fn get_by_id(&self, id_: uuid::Uuid) -> Result<Option<Movie>, Box<dyn std::error::Error>> {
+    pub async fn get_by_id(
+        &self,
+        id_: uuid::Uuid,
+    ) -> Result<Option<Movie>, Box<dyn std::error::Error>> {
         use crate::schema::movies::dsl::*;
 
         let conn = &mut self.pool.get().await?;
@@ -52,7 +49,7 @@ impl MovieService {
 
     pub async fn query_movies(
         &self,
-        name_: String,
+        name_: Option<String>,
         limit: i64,
         offset: i64,
         sort_by: SortBy,
@@ -63,12 +60,18 @@ impl MovieService {
 
         Ok(conn
             .interact(move |conn| {
-                let query = movies.limit(limit).offset(offset).filter(name.ilike(name_));
+                let mut query = movies.limit(limit).offset(offset).into_boxed();
 
-                match sort_by {
-                    SortBy::Newest => query.order_by(release_date.desc()).load::<Movie>(conn),
-                    SortBy::Oldest => query.order_by(release_date.asc()).load::<Movie>(conn),
+                if let Some(name_) = name_ {
+                    query = query.filter(name.eq(name_));
                 }
+
+                query = match sort_by {
+                    SortBy::Newest => query.order_by(release_date.desc()),
+                    SortBy::Oldest => query.order_by(release_date.asc()),
+                };
+
+                query.load(conn)
             })
             .await??)
     }
@@ -88,5 +91,64 @@ impl MovieService {
             .await??;
 
         Ok(())
+    }
+
+    pub async fn get_review_by_id(
+        &self,
+        id_: uuid::Uuid,
+    ) -> Result<Option<MovieReview>, Box<dyn std::error::Error>> {
+        use crate::schema::movie_reviews::dsl::*;
+
+        let conn = self.pool.get().await?;
+
+        Ok(conn
+            .interact(move |conn| movie_reviews.filter(id.eq(id_)).load(conn))
+            .await??
+            .first()
+            .cloned())
+    }
+
+    pub async fn delete_review_by_id(
+        &self,
+        id_: uuid::Uuid,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        use crate::schema::movie_reviews::dsl::*;
+
+        let conn = self.pool.get().await?;
+
+        conn.interact(move |conn| {
+            diesel::delete(movie_reviews)
+                .filter(id.eq(id_))
+                .execute(conn)
+        })
+        .await??;
+
+        Ok(())
+    }
+
+    pub async fn query_reviews(
+        &self,
+        movie_id_: uuid::Uuid,
+        limit: i64,
+        offset: i64,
+        sort_by: SortBy,
+    ) -> Result<Vec<MovieReview>, Box<dyn std::error::Error>> {
+        use crate::schema::movie_reviews::dsl::*;
+
+        let conn = self.pool.get().await?;
+
+        Ok(conn
+            .interact(move |conn| {
+                let query = movie_reviews
+                    .filter(movie_id.eq(movie_id_))
+                    .limit(limit)
+                    .offset(offset);
+
+                match sort_by {
+                    SortBy::Newest => query.order_by(created_at.desc()).load::<MovieReview>(conn),
+                    SortBy::Oldest => query.order_by(created_at.asc()).load::<MovieReview>(conn),
+                }
+            })
+            .await??)
     }
 }

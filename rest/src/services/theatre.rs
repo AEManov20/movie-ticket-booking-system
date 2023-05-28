@@ -24,48 +24,62 @@ impl TheatreService {
     pub async fn create(
         &self,
         theatre: FormTheatre,
-    ) -> Result<Option<Theatre>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<TheatreResource>, Box<dyn std::error::Error>> {
         use crate::schema::theatres::dsl::*;
 
         let conn = self.pool.get().await?;
 
-        Ok(conn
-            .interact(|conn| diesel::insert_into(theatres).values(theatre).load(conn))
+        let Some(theatre) = conn
+            .interact(|conn| diesel::insert_into(theatres).values(theatre).load::<Theatre>(conn))
             .await??
             .first()
-            .cloned())
+            .cloned() else {
+                return Ok(None)
+            };
+
+        Ok(Some(TheatreResource {
+            theatre,
+            pool: self.pool.clone(),
+        }))
     }
 
     pub async fn update(
         &self,
         id_: uuid::Uuid,
         theatre: FormTheatre,
-    ) -> Result<Option<Theatre>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<TheatreResource>, Box<dyn std::error::Error>> {
         use crate::schema::theatres::dsl::*;
 
         let conn = self.pool.get().await?;
 
-        Ok(conn
+        let Some(theatre) = conn
             .interact(move |conn| {
                 diesel::update(theatres)
                     .filter(id.eq(id_))
                     .set(theatre)
-                    .load(conn)
+                    .load::<Theatre>(conn)
             })
             .await??
             .first()
-            .cloned())
+            .cloned() else {
+                return Ok(None);
+            };
+
+        Ok(Some(TheatreResource {
+            theatre,
+            pool: self.pool.clone(),
+        }))
     }
 
     pub async fn get_by_name(
         &self,
         name_: String,
-    ) -> Result<Option<Theatre>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<TheatreResource>, Box<dyn std::error::Error>> {
         use crate::schema::theatres::dsl::*;
 
         let conn = self.pool.get().await?;
 
-        Ok(conn
+        let Some(theatre) = conn
             .interact(|conn| {
                 theatres
                     .filter(name.eq(name_))
@@ -74,19 +88,33 @@ impl TheatreService {
             })
             .await??
             .first()
-            .cloned())
+            .cloned() else {
+                return Ok(None)
+            };
+        
+        Ok(Some(TheatreResource {
+            theatre,
+            pool: self.pool.clone(),
+        }))
     }
 
-    pub async fn get_by_id(&self, id_: uuid::Uuid) -> Result<Option<Theatre>, Box<dyn std::error::Error>> {
+    pub async fn get_by_id(&self, id_: uuid::Uuid) -> Result<Option<TheatreResource>, Box<dyn std::error::Error>> {
         use crate::schema::theatres::dsl::*;
 
         let conn = self.pool.get().await?;
 
-        Ok(conn
+        let Some(theatre) = conn
             .interact(move |conn| theatres.filter(id.eq(id_)).limit(1).load::<Theatre>(conn))
             .await??
             .first()
-            .cloned())
+            .cloned() else {
+                return Ok(None)
+            };
+
+        Ok(Some(TheatreResource {
+            theatre,
+            pool: self.pool.clone(),
+        }))
     }
 
     pub async fn get_nearby(&self, location_: String, radius: f32) {
