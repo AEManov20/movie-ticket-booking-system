@@ -14,13 +14,14 @@ deadpool-diesel = { version = "0.4.1", features = ["postgres", "rt_tokio_1", "se
 
 chrono = { version = "0.4", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
-rayon = "1.7.0"
+rayon = "1.7"
 uuid = { version = "1.3.3", features = ["serde"] }
-serde_json = "1.0.96"
+serde_json = "1.0"
 jsonwebtoken = "8.3.0"
 casey = "0.4.0"
 validator = { version = "0.16.0", features = ["derive"] }
 lazy_static = "1.4.0"
 env_logger = "0.10.0"
-log = "0.4.17"
-futures-util = "0.3.28"
+log = "0.4"
+futures-util = "0.3"
+thiserror = "1.0"

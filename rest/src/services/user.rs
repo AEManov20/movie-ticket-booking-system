@@ -14,6 +14,7 @@ use serde::Serialize;
 use crate::model::*;
 use crate::password;
 use crate::vars::{jwt_email_secret, jwt_ticket_secret, jwt_user_secret};
+use super::DatabaseError;
 
 pub const EMAIL_CONFIRMATION_TOKEN_EXPIRY_DAYS: i64 = 1;
 pub const USER_TOKEN_EXPIRY_DAYS: i64 = 2;
@@ -32,7 +33,7 @@ impl UserService {
     pub async fn create(
         &self,
         user: FormUser,
-    ) -> Result<Option<UserResource>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<UserResource>, DatabaseError> {
         use crate::schema::users::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -40,10 +41,7 @@ impl UserService {
         let hash = password::hash(user.password.as_bytes())?;
 
         if !password::verify(user.password.as_bytes(), &hash) {
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "Hash failed verification",
-            )));
+            return Err(DatabaseError::Other("Hash failed verification".to_string()));
         }
 
         let result = conn
@@ -71,7 +69,7 @@ impl UserService {
     pub async fn get_by_email(
         &self,
         email_: String,
-    ) -> Result<Option<UserResource>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<UserResource>, DatabaseError> {
         use crate::schema::users::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -92,7 +90,7 @@ impl UserService {
         &self,
         email_: Option<String>,
         username_: Option<String>,
-    ) -> Result<Option<UserResource>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<UserResource>, DatabaseError> {
         use crate::schema::users::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -124,7 +122,7 @@ impl UserService {
     pub async fn get_by_id(
         &self,
         id_: uuid::Uuid,
-    ) -> Result<Option<UserResource>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<UserResource>, DatabaseError> {
         use crate::schema::users::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -141,7 +139,7 @@ impl UserService {
         }
     }
 
-    pub async fn delete(&self, id_: uuid::Uuid) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn delete(&self, id_: uuid::Uuid) -> Result<(), DatabaseError> {
         use crate::schema::users::dsl::*;
 
         self.pool
@@ -249,7 +247,7 @@ impl UserResource {
         }
     }
 
-    pub async fn activate(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn activate(&self) -> Result<(), DatabaseError> {
         use crate::schema::users::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -268,7 +266,7 @@ impl UserResource {
 
     pub async fn get_theatre_permissions(
         &self,
-    ) -> Result<Vec<TheatrePermission>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<TheatrePermission>, DatabaseError> {
         let conn = self.pool.get().await?;
         let user = self.user.clone();
 
@@ -280,7 +278,7 @@ impl UserResource {
     pub async fn get_theatre_permission(
         &self,
         theatre_id_: uuid::Uuid,
-    ) -> Result<Option<TheatrePermission>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<TheatrePermission>, DatabaseError> {
         use crate::schema::theatre_permissions::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -305,7 +303,7 @@ impl UserResource {
         can_manage_tickets: bool,
         can_manage_users: bool,
         is_theatre_owner: bool,
-    ) -> Result<Option<TheatrePermission>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<TheatrePermission>, DatabaseError> {
         let conn = self.pool.get().await?;
 
         let permission = FormTheatrePermission {
@@ -337,7 +335,7 @@ impl UserResource {
         can_manage_tickets: bool,
         can_manage_users: bool,
         is_theatre_owner: bool,
-    ) -> Result<Option<TheatrePermission>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<TheatrePermission>, DatabaseError> {
         let conn = self.pool.get().await?;
 
         let update = UpdateTheatrePermission {
@@ -366,7 +364,7 @@ impl UserResource {
     pub async fn delete_theatre_permission(
         &self,
         theatre_id_: uuid::Uuid,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), DatabaseError> {
         use crate::schema::theatre_permissions::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -383,7 +381,7 @@ impl UserResource {
     pub async fn update_user(
         &mut self,
         new_user: FormUser,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), DatabaseError> {
         use crate::schema::users::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -406,7 +404,7 @@ impl UserResource {
             .cloned();
 
         let Some(result) = result else {
-            return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "Database returned nothing").into())
+            return Err(DatabaseError::Other("Database returned nothing".to_string()))
         };
 
         self.user = result;
@@ -418,7 +416,7 @@ impl UserResource {
         &mut self,
         old_password: String,
         new_password: String,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), DatabaseError> {
         let conn = self.pool.get().await?;
         let user = self.user.clone();
 
@@ -451,27 +449,17 @@ impl UserResource {
         let Some(ref hash) = self.user.password_hash else {
             match conn.interact(move |conn| insert_password(user.id, new_password.as_bytes(), conn)).await?? {
                 Some(v) => self.user.password_hash = v.password_hash,
-                None => return Err(Box::new(std::io::Error::new(
-                    std::io::ErrorKind::Other,
-                    "Password could not be updated",
-                )))
+                None => return Err(DatabaseError::Other("Password could not be updated".to_string()))
             };
             return Ok(())
         };
 
-        if !password::verify(old_password.as_bytes(), hash) {
-            Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::PermissionDenied,
-                "Invalid password",
-            )))
-        } else {
-            conn.interact(move |conn| insert_password(user.id, new_password.as_bytes(), conn))
-                .await??;
-            Ok(())
-        }
+        conn.interact(move |conn| insert_password(user.id, new_password.as_bytes(), conn))
+            .await??;
+        Ok(())
     }
 
-    pub async fn get_tickets(&self) -> Result<Vec<TicketResource>, Box<dyn std::error::Error>> {
+    pub async fn get_tickets(&self) -> Result<Vec<TicketResource>, DatabaseError> {
         let conn = self.pool.get().await?;
         let cloned_user = self.user.clone();
 
@@ -490,7 +478,7 @@ impl UserResource {
         ticket_type_id: uuid::Uuid,
         seat_row: i32,
         seat_column: i32,
-    ) -> Result<Option<TicketResource>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<TicketResource>, DatabaseError> {
         let conn = self.pool.get().await?;
 
         let ticket = CreateTicket {
@@ -518,7 +506,7 @@ impl UserResource {
         }
     }
 
-    pub async fn delete_ticket(&self, id_: uuid::Uuid) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn delete_ticket(&self, id_: uuid::Uuid) -> Result<(), DatabaseError> {
         use crate::schema::tickets::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -529,7 +517,7 @@ impl UserResource {
         Ok(())
     }
 
-    pub async fn get_reviews(&self) -> Result<Vec<MovieReview>, Box<dyn std::error::Error>> {
+    pub async fn get_reviews(&self) -> Result<Vec<MovieReview>, DatabaseError> {
         let conn = self.pool.get().await?;
         let cloned_user = self.user.clone();
 
@@ -543,7 +531,7 @@ impl UserResource {
         content: Option<String>,
         rating: f64,
         movie_id: uuid::Uuid,
-    ) -> Result<Option<MovieReview>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<MovieReview>, DatabaseError> {
         let conn = self.pool.get().await?;
 
         let review = CreateMovieReview {
@@ -569,7 +557,7 @@ impl UserResource {
         id_: uuid::Uuid,
         content_: Option<String>,
         rating_: f64,
-    ) -> Result<Option<MovieReview>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<MovieReview>, DatabaseError> {
         use crate::schema::movie_reviews::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -588,7 +576,7 @@ impl UserResource {
             .cloned())
     }
 
-    pub async fn delete_review(&self, id_: uuid::Uuid) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn delete_review(&self, id_: uuid::Uuid) -> Result<(), DatabaseError> {
         use crate::schema::movie_reviews::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -645,7 +633,7 @@ impl TicketResource {
         }
     }
 
-    async fn set_usage(&self, state: bool) -> Result<(), Box<dyn std::error::Error>> {
+    async fn set_usage(&self, state: bool) -> Result<(), DatabaseError> {
         use crate::schema::tickets::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -661,11 +649,11 @@ impl TicketResource {
         Ok(())
     }
 
-    pub async fn mark_as_used(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn mark_as_used(&self) -> Result<(), DatabaseError> {
         self.set_usage(true).await
     }
 
-    pub async fn mark_as_unused(&self) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn mark_as_unused(&self) -> Result<(), DatabaseError> {
         self.set_usage(false).await
     }
 }

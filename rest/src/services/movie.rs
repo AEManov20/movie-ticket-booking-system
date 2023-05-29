@@ -5,6 +5,7 @@ use serde::Deserialize;
 use crate::model::*;
 use crate::password;
 
+use super::DatabaseError;
 use super::SortBy;
 
 #[derive(Clone)]
@@ -20,7 +21,7 @@ impl MovieService {
     pub async fn create(
         &self,
         movie: FormMovie,
-    ) -> Result<Option<Movie>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<Movie>, DatabaseError> {
         use crate::schema::movies::dsl::*;
 
         let conn = &mut self.pool.get().await?;
@@ -35,7 +36,7 @@ impl MovieService {
     pub async fn get_by_id(
         &self,
         id_: uuid::Uuid,
-    ) -> Result<Option<Movie>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<Movie>, DatabaseError> {
         use crate::schema::movies::dsl::*;
 
         let conn = &mut self.pool.get().await?;
@@ -53,7 +54,7 @@ impl MovieService {
         limit: i64,
         offset: i64,
         sort_by: SortBy,
-    ) -> Result<Vec<Movie>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<Movie>, DatabaseError> {
         use crate::schema::movies::dsl::*;
 
         let conn = &mut self.pool.get().await?;
@@ -76,7 +77,7 @@ impl MovieService {
             .await??)
     }
 
-    pub async fn delete(&self, id_: uuid::Uuid) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn delete(&self, id_: uuid::Uuid) -> Result<(), DatabaseError> {
         use crate::schema::movies::dsl::*;
 
         self.pool
@@ -96,7 +97,7 @@ impl MovieService {
     pub async fn get_review_by_id(
         &self,
         id_: uuid::Uuid,
-    ) -> Result<Option<MovieReview>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<MovieReview>, DatabaseError> {
         use crate::schema::movie_reviews::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -111,7 +112,7 @@ impl MovieService {
     pub async fn delete_review_by_id(
         &self,
         id_: uuid::Uuid,
-    ) -> Result<(), Box<dyn std::error::Error>> {
+    ) -> Result<(), DatabaseError> {
         use crate::schema::movie_reviews::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -132,7 +133,7 @@ impl MovieService {
         limit: i64,
         offset: i64,
         sort_by: SortBy,
-    ) -> Result<Vec<MovieReview>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<MovieReview>, DatabaseError> {
         use crate::schema::movie_reviews::dsl::*;
 
         let conn = self.pool.get().await?;

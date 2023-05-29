@@ -1,15 +1,13 @@
 use argon2::{
-    password_hash::{rand_core::{OsRng, RngCore}, SaltString},
+    password_hash::{rand_core::{OsRng, RngCore}, SaltString, Error},
     PasswordHash, PasswordHasher, PasswordVerifier, Argon2,
-    Error
 };
 
-pub fn hash(password: &[u8]) -> Result<String, String> {
+use crate::schema::users::password_hash;
+
+pub fn hash(password: &[u8]) -> Result<String, Error> {
     let salt = SaltString::generate(&mut OsRng);
-    match Argon2::default().hash_password(password, &salt) {
-        Ok(v) => Ok(v.to_string()),
-        Err(e) => Err(e.to_string())
-    }
+    Ok(Argon2::default().hash_password(password, &salt)?.to_string())
 }
 
 pub fn verify(password: &[u8], hash: &str) -> bool {

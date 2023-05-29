@@ -4,6 +4,7 @@ use diesel::prelude::*;
 use crate::model::*;
 use crate::password;
 use crate::schema::tickets::owner_user_id;
+use super::DatabaseError;
 
 #[derive(Copy, Clone, Debug, Default)]
 struct Point {
@@ -24,7 +25,7 @@ impl TheatreService {
     pub async fn create(
         &self,
         theatre: FormTheatre,
-    ) -> Result<Option<TheatreResource>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<TheatreResource>, DatabaseError> {
         use crate::schema::theatres::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -47,7 +48,7 @@ impl TheatreService {
         &self,
         id_: uuid::Uuid,
         theatre: FormTheatre,
-    ) -> Result<Option<TheatreResource>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<TheatreResource>, DatabaseError> {
         use crate::schema::theatres::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -74,7 +75,7 @@ impl TheatreService {
     pub async fn get_by_name(
         &self,
         name_: String,
-    ) -> Result<Option<TheatreResource>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<TheatreResource>, DatabaseError> {
         use crate::schema::theatres::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -98,7 +99,7 @@ impl TheatreService {
         }))
     }
 
-    pub async fn get_by_id(&self, id_: uuid::Uuid) -> Result<Option<TheatreResource>, Box<dyn std::error::Error>> {
+    pub async fn get_by_id(&self, id_: uuid::Uuid) -> Result<Option<TheatreResource>, DatabaseError> {
         use crate::schema::theatres::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -121,7 +122,7 @@ impl TheatreService {
         todo!();
     }
 
-    pub async fn delete(&self, id_: uuid::Uuid) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn delete(&self, id_: uuid::Uuid) -> Result<(), DatabaseError> {
         use crate::schema::theatres::dsl::*;
 
         self.pool
@@ -145,7 +146,7 @@ pub struct TheatreResource {
 }
 
 impl TheatreResource {
-    async fn get_halls(&self) -> Result<Vec<HallResource>, Box<dyn std::error::Error>> {
+    async fn get_halls(&self) -> Result<Vec<HallResource>, DatabaseError> {
         let conn = self.pool.get().await?;
 
         let theatre = self.theatre.clone();
@@ -161,7 +162,7 @@ impl TheatreResource {
             .collect())
     }
 
-    async fn get_permissions(&self) -> Result<Vec<TheatrePermission>, Box<dyn std::error::Error>> {
+    async fn get_permissions(&self) -> Result<Vec<TheatrePermission>, DatabaseError> {
         let conn = self.pool.get().await?;
 
         let theatre = self.theatre.clone();
@@ -171,7 +172,7 @@ impl TheatreResource {
             .await??)
     }
 
-    async fn get_ticket_types(&self) -> Result<Vec<TicketType>, Box<dyn std::error::Error>> {
+    async fn get_ticket_types(&self) -> Result<Vec<TicketType>, DatabaseError> {
         let conn = self.pool.get().await?;
 
         let theatre = self.theatre.clone();
@@ -185,7 +186,7 @@ impl TheatreResource {
         &self,
         id_: uuid::Uuid,
         new_ticket_type: FormTicketType,
-    ) -> Result<Option<TicketType>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<TicketType>, DatabaseError> {
         use crate::schema::ticket_types::dsl::*;
         let conn = self.pool.get().await?;
 
@@ -204,7 +205,7 @@ impl TheatreResource {
     async fn create_ticket_type(
         &self,
         new_ticket_type: FormTicketType,
-    ) -> Result<Option<TicketType>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<TicketType>, DatabaseError> {
         let conn = self.pool.get().await?;
 
         Ok(conn
@@ -218,7 +219,7 @@ impl TheatreResource {
             .cloned())
     }
 
-    async fn delete_ticket_type(&self, id_: uuid::Uuid) -> Result<(), Box<dyn std::error::Error>> {
+    async fn delete_ticket_type(&self, id_: uuid::Uuid) -> Result<(), DatabaseError> {
         use crate::schema::ticket_types::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -239,7 +240,7 @@ impl TheatreResource {
         for_theatre_movie: Option<uuid::Uuid>,
         ticket_type: Option<uuid::Uuid>,
         by_issuer: Option<uuid::Uuid>,
-    ) -> Result<Vec<Ticket>, Box<dyn std::error::Error>> {
+    ) -> Result<Vec<Ticket>, DatabaseError> {
         use crate::schema::tickets::dsl::*;
 
         let mut conn = self.pool.get().await?;
@@ -276,7 +277,7 @@ pub struct HallResource {
 }
 
 impl HallResource {
-    async fn get_theatre_movies(&self) -> Result<Vec<TheatreMovie>, Box<dyn std::error::Error>> {
+    async fn get_theatre_movies(&self) -> Result<Vec<TheatreMovie>, DatabaseError> {
         let conn = self.pool.get().await?;
 
         let hall = self.hall.clone();
@@ -289,7 +290,7 @@ impl HallResource {
     async fn new_theatre_movie(
         &self,
         theatre_movie: FormTheatreMovie,
-    ) -> Result<Option<TheatreMovie>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<TheatreMovie>, DatabaseError> {
         let conn = self.pool.get().await?;
 
         Ok(conn
@@ -307,7 +308,7 @@ impl HallResource {
         &self,
         id_: uuid::Uuid,
         new_theatre_movie: FormTheatreMovie,
-    ) -> Result<Option<TheatreMovie>, Box<dyn std::error::Error>> {
+    ) -> Result<Option<TheatreMovie>, DatabaseError> {
         use crate::schema::theatre_movies::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -324,7 +325,7 @@ impl HallResource {
             .cloned())
     }
 
-    async fn delete_theatre_movie(&self, id_: uuid::Uuid) -> Result<(), Box<dyn std::error::Error>> {
+    async fn delete_theatre_movie(&self, id_: uuid::Uuid) -> Result<(), DatabaseError> {
         use crate::schema::theatre_movies::dsl::*;
 
         let conn = self.pool.get().await?;
