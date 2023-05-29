@@ -1,10 +1,10 @@
-use actix_web::{delete, get, http::header, post, put, web, HttpResponse, Responder};
+use actix_web::{delete, get, http::{header, StatusCode}, post, put, web, HttpResponse, Responder, ResponseError};
 use log::*;
 use serde::{Deserialize, Serialize};
 use validator::{Validate, ValidationErrors};
 use std::fmt;
 
-use crate::{services::user::{UserService, UserResource}, model::{JwtClaims, JwtType}};
+use crate::{services::{user::{UserService, UserResource}, self}, model::{JwtClaims, JwtType}};
 
 pub mod auth;
 pub mod movie;
@@ -12,10 +12,21 @@ pub mod theatre;
 pub mod user;
 
 #[derive(Serialize, Debug)]
+#[serde(tag = "type")]
+pub enum ErrorType {
+    Validation(ValidationErrors),
+    Database(String),
+    ServerError,
+    Conflict,
+    Invalid,
+    Expired,
+    NotFound,
+}
+
+#[derive(Serialize, Debug)]
 pub struct ErrorResponse<T> {
     pub error: T,
 }
-
 
 #[derive(Serialize, Debug)]
 #[serde(tag = "type")]
@@ -49,6 +60,17 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         .configure(theatre::config)
         .configure(user::config);
 }
+
+// impl ResponseError for services::DatabaseError {
+//     fn error_response(&self) -> HttpResponse<actix_web::body::BoxBody> {
+//         HttpResponse::build(self.status_code())
+//             .json(value)
+//     }
+
+//     fn status_code(&self) -> actix_web::http::StatusCode {
+//         StatusCode::INTERNAL_SERVER_ERROR
+//     }
+// }
 
 impl<T> fmt::Display for ErrorResponse<T>
 where T:
