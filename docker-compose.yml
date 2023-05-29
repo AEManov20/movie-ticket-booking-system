@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  db:
+    image: 'postgres:15.3-bullseye'
+    env_file: 'rest/.env'
+    volumes:
+      - 'db:/var/lib/postgresql/data'
+    ports:
+      - '1432:5432'
+  admin:
+    image: 'dpage/pgadmin4'
+    env_file: 'rest/.env'
+    volumes:
+      - 'admin:/var/lib/pgadmin'
+    ports:
+      - '1433:8081'
+    depends_on:
+     - 'db'
+
+volumes:
+  db:
+  admin:
