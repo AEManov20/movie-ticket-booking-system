@@ -1,11 +1,11 @@
 use super::*;
 use chrono::Utc;
 
+use super::ErrorType;
 use crate::{
     model::{FormUser, JwtType, LoginUser, User},
-    services::user::{UserResource, UserService, LoginResponse},
+    services::user::{LoginResponse, UserResource, UserService},
 };
-use super::ErrorType;
 
 #[derive(Deserialize)]
 struct EmailVerificationQuery {
@@ -26,7 +26,7 @@ async fn login_user(
     let user = User::from(user_res.clone());
 
     if !user.is_activated {
-        return Err(ErrorType::EmailNotVerified)
+        return Err(ErrorType::EmailNotVerified);
     }
 
     let Some(password_hash) = user.password_hash else {
@@ -46,10 +46,14 @@ async fn register_user(
     user_service: web::Data<UserService>,
 ) -> Result<String> {
     user.validate()?;
-    
-    let Ok(None) = user_service.get_by_email_or_username(Some(user.email.clone()), Some(user.username.clone())).await else {
-        return Err(ErrorType::Conflict)
-    };
+
+    if user_service
+        .get_by_email_or_username(Some(user.email.clone()), Some(user.username.clone()))
+        .await?
+        .is_some()
+    {
+        return Err(ErrorType::Conflict);
+    }
 
     let Some(user) = user_service.create(user.into_inner()).await? else {
         return Err(ErrorType::ServerError)

@@ -9,7 +9,7 @@ edition = "2021"
 actix-web = "4"
 argon2 = "0.5"
 dotenv = "0.15"
-diesel = { version = "2.0", features = ["postgres", "chrono", "uuid", "serde_json", "r2d2"] }
+diesel = { version = "2.1", features = ["postgres", "chrono", "uuid", "serde_json", "r2d2"] }
 deadpool-diesel = { version = "0.4.1", features = ["postgres", "rt_tokio_1", "serde"] }
 
 chrono = { version = "0.4", features = ["serde"] }
