@@ -323,18 +323,18 @@ enum AuthErrorType {
 }
 
 impl FromRequest for JwtClaims {
-    type Error = actix_web::Error;
+    type Error = crate::handlers::ErrorType;
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
-        use crate::handlers::ErrorResponse;
+        use crate::handlers::{ErrorType};
 
         let Some(token) = req.headers().get(http::header::AUTHORIZATION) else {
-            return ready(Err(ErrorUnauthorized(ErrorResponse { error: AuthErrorType::NoToken })));
+            return ready(Err(ErrorType::NoAuth))
         };
 
         let Ok(token) = token.to_str() else {
-            return ready(Err(ErrorInternalServerError(ErrorResponse { error: AuthErrorType::Other })));
+            return ready(Err(ErrorType::ServerError));
         };
 
         ready(
@@ -345,22 +345,16 @@ impl FromRequest for JwtClaims {
             ) {
                 Ok(c) => {
                     if Utc::now().timestamp() > c.claims.exp {
-                        return ready(Err(ErrorUnauthorized(ErrorResponse {
-                            error: AuthErrorType::TokenExpired,
-                        })));
+                        return ready(Err(ErrorType::Expired));
                     }
 
                     if let JwtType::User(_) = c.claims.dat {
                         Ok(c.claims)
                     } else {
-                        Err(ErrorUnauthorized(ErrorResponse {
-                            error: AuthErrorType::InvalidToken,
-                        }))
+                        Err(ErrorType::Invalid)
                     }
                 }
-                Err(_) => Err(ErrorUnauthorized(ErrorResponse {
-                    error: AuthErrorType::InvalidToken,
-                })),
+                Err(_) => Err(ErrorType::Invalid),
             },
         )
     }

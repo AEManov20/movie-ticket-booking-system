@@ -1,7 +1,6 @@
 use std::future::{ready, Ready};
 use std::pin::Pin;
 
-use crate::handlers::ErrorResponse;
 use crate::util::JWT_ALGO;
 use deadpool_diesel::postgres::{Manager, Pool};
 use diesel::associations::HasTable;
@@ -174,7 +173,7 @@ impl UserResource {
         Self { user, pool }
     }
 
-    pub fn create_jwt(&self) -> jsonwebtoken::errors::Result<LoginResponse> {
+    pub fn create_jwt(&self) -> Result<LoginResponse, DatabaseError> {
         let token = encode(
             &Header::new(*JWT_ALGO),
             &JwtClaims {
@@ -219,8 +218,8 @@ impl UserResource {
         }
     }
 
-    pub fn create_email_jwt(&self) -> jsonwebtoken::errors::Result<String> {
-        jsonwebtoken::encode(
+    pub fn create_email_jwt(&self) -> Result<String, DatabaseError> {
+        Ok(jsonwebtoken::encode(
             &Header::new(*JWT_ALGO),
             &JwtClaims {
                 dat: JwtType::Email(self.user.id),
@@ -231,20 +230,15 @@ impl UserResource {
                 .timestamp(),
             },
             &EncodingKey::from_secret(jwt_email_secret().as_ref()),
-        )
+        )?)
     }
 
-    pub fn verify_email_jwt(email_jwt: &str) -> Option<JwtClaims> {
-        let data = decode::<JwtClaims>(
+    pub fn verify_email_jwt(email_jwt: &str) -> Result<JwtClaims, DatabaseError> {
+        Ok(decode::<JwtClaims>(
             email_jwt,
             &DecodingKey::from_secret(jwt_email_secret().as_bytes()),
             &Validation::new(*JWT_ALGO),
-        );
-
-        match data {
-            Ok(v) => Some(v.claims),
-            Err(_) => None,
-        }
+        )?.claims)
     }
 
     pub async fn activate(&self) -> Result<(), DatabaseError> {

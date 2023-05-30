@@ -20,6 +20,8 @@ pub enum DatabaseError {
     Pool(#[from] PoolError),
     #[error("hashing was unsuccessful")]
     Hash(password_hash::Error),
+    #[error("jwt token creation was unsuccessful")]
+    Jwt(#[from] jsonwebtoken::errors::Error),
     #[error("interaction with database unsuccessful")]
     Interact(#[from] InteractError),
     #[error("query did not execute properly")]
