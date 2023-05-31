@@ -8,7 +8,7 @@ use serde_json::json;
 use validator::{Validate, ValidationErrors};
 
 use crate::{
-    model::{JwtClaims, JwtType},
+    model::{JwtClaims, JwtType, User},
     services::{
         user::{UserResource, UserService},
         DatabaseError,
@@ -42,7 +42,7 @@ type Result<T> = std::result::Result<SuccessResponse<T>, ErrorType>;
 async fn user_res_from_jwt(
     claims: &JwtClaims,
     user_service: &UserService,
-) -> std::result::Result<UserResource, ErrorType> {
+) -> std::result::Result<(UserResource, User), ErrorType> {
     let JwtType::User(user_id) = claims.dat else {
         return Err(ErrorType::Invalid)
     };
@@ -50,7 +50,7 @@ async fn user_res_from_jwt(
     let user = user_service.get_by_id(user_id).await?;
 
     match user {
-        Some(v) => Ok(v),
+        Some(v) => Ok((v.clone(), User::from(v))),
         None => Err(ErrorType::ServerError),
     }
 }

@@ -47,7 +47,7 @@ async fn submit_new_review(
     user_service: web::Data<UserService>,
     claims: JwtClaims,
 ) -> Result<MovieReview> {
-    let user_res = user_res_from_jwt(&claims, &user_service).await?;
+    let (user_res, _) = user_res_from_jwt(&claims, &user_service).await?;
 
     match user_res.create_review(new_review.content.clone(), new_review.rating, new_review.movie_id).await? {
         Some(v) => Ok(v.into()),
@@ -65,7 +65,7 @@ async fn get_review_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::Da
 
 #[delete("/review/{id}")]
 async fn delete_review_by_id(path: web::Path<(uuid::Uuid,)>, user_service: web::Data<UserService>, movie_service: web::Data<MovieService>, claims: JwtClaims) -> Result<()> {
-    let user = User::from(user_res_from_jwt(&claims, &user_service).await?);
+    let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let Some(review) = movie_service.get_review_by_id(path.0).await? else {
         return Err(ErrorType::NotFound)
     };
@@ -104,14 +104,17 @@ async fn query_movies(
 #[get("/{id}")]
 async fn get_movie_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::Data<MovieService>) -> Result<Movie> {
     match movie_service.get_by_id(path.0).await? {
-        Some(v) => Ok(v.into()),
+        Some(v) => {
+            if !v.is_deleted { Ok(v.into()) }
+            else { Err(ErrorType::NotFound) }
+        },
         None => Err(ErrorType::NotFound)
     }
 }
 
 #[delete("/{id}")]
 async fn delete_movie_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::Data<MovieService>, user_service: web::Data<UserService>, claims: JwtClaims) -> Result<()> {
-    let user = User::from(user_res_from_jwt(&claims, &user_service).await?);
+    let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
 
     if user.is_super_user {
         Ok(movie_service.delete(path.0).await?.into())
@@ -124,7 +127,7 @@ async fn delete_movie_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::
 async fn insert_movie(movie: web::Json<FormMovie>, movie_service: web::Data<MovieService>, user_service: web::Data<UserService>, claims: JwtClaims) -> Result<Movie> {
     movie.validate()?;
 
-    let user = User::from(user_res_from_jwt(&claims, &user_service).await?);
+    let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     if user.is_super_user {
         match movie_service.create(movie.into_inner()).await? {
             Some(v) => Ok(v.into()),

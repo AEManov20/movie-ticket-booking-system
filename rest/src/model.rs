@@ -312,16 +312,6 @@ impl From<User> for SlimUser {
     }
 }
 
-#[derive(Serialize, Debug)]
-#[serde(tag = "type")]
-enum AuthErrorType {
-    NoToken,
-    InvalidToken,
-    TokenExpired,
-    UserDoesNotExist,
-    Other,
-}
-
 impl FromRequest for JwtClaims {
     type Error = crate::handlers::ErrorType;
     type Future = Ready<Result<Self, Self::Error>>;
