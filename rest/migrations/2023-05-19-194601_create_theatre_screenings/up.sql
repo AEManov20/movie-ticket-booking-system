@@ -1,12 +1,12 @@
 -- Your SQL goes here
 
-CREATE TABLE IF NOT EXISTS theatre_movies (
+CREATE TABLE IF NOT EXISTS theatre_screenings (
     "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     movie_id UUID NOT NULL REFERENCES movies("id"),
     theatre_id UUID NOT NULL REFERENCES theatres("id"),
     hall_id UUID NOT NULL REFERENCES halls("id"),
-    subtitles_language VARCHAR(50),
-    audio_language VARCHAR(50) NOT NULL,
+    subtitles_language UUID,
+    audio_language UUID NOT NULL,
     starting_time TIMESTAMP NOT NULL,
     -- 0 - not yet started
     -- 1 - adverts are running
