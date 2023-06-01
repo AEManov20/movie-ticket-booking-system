@@ -477,7 +477,7 @@ impl UserResource {
 
         let ticket = CreateTicket {
             owner_user_id: self.user.id,
-            theatre_movie_id,
+            theatre_screening_id: theatre_movie_id,
             ticket_type_id,
             issuer_user_id,
             seat_row,

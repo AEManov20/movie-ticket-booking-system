@@ -254,7 +254,7 @@ impl TheatreResource {
                 }
 
                 if let Some(for_theatre_movie) = for_theatre_movie {
-                    query = query.filter(theatre_movie_id.eq(for_theatre_movie));
+                    query = query.filter(theatre_screening_id.eq(for_theatre_movie));
                 }
 
                 if let Some(ticket_type) = ticket_type {
@@ -277,25 +277,25 @@ pub struct HallResource {
 }
 
 impl HallResource {
-    pub async fn get_theatre_movies(&self) -> Result<Vec<TheatreMovie>, DatabaseError> {
+    pub async fn get_theatre_movies(&self) -> Result<Vec<TheatreScreening>, DatabaseError> {
         let conn = self.pool.get().await?;
 
         let hall = self.hall.clone();
 
         Ok(conn
-            .interact(move |conn| TheatreMovie::belonging_to(&hall).load(conn))
+            .interact(move |conn| TheatreScreening::belonging_to(&hall).load(conn))
             .await??)
     }
 
-    pub async fn new_theatre_movie(
+    pub async fn new_theatre_screening(
         &self,
-        theatre_movie: FormTheatreMovie,
-    ) -> Result<Option<TheatreMovie>, DatabaseError> {
+        theatre_movie: FormTheatreScreening,
+    ) -> Result<Option<TheatreScreening>, DatabaseError> {
         let conn = self.pool.get().await?;
 
         Ok(conn
             .interact(|conn| {
-                diesel::insert_into(crate::schema::theatre_movies::table)
+                diesel::insert_into(crate::schema::theatre_screenings::table)
                     .values(theatre_movie)
                     .load(conn)
             })
@@ -304,20 +304,20 @@ impl HallResource {
             .cloned())
     }
 
-    pub async fn update_theatre_movie(
+    pub async fn update_theatre_screening(
         &self,
         id_: uuid::Uuid,
-        new_theatre_movie: FormTheatreMovie,
-    ) -> Result<Option<TheatreMovie>, DatabaseError> {
-        use crate::schema::theatre_movies::dsl::*;
+        new_theatre_screening: FormTheatreScreening,
+    ) -> Result<Option<TheatreScreening>, DatabaseError> {
+        use crate::schema::theatre_screenings::dsl::*;
 
         let conn = self.pool.get().await?;
 
         Ok(conn
             .interact(move |conn| {
-                diesel::update(theatre_movies)
+                diesel::update(theatre_screenings)
                     .filter(id.eq(id_))
-                    .set(new_theatre_movie)
+                    .set(new_theatre_screening)
                     .load(conn)
             })
             .await??
@@ -325,13 +325,13 @@ impl HallResource {
             .cloned())
     }
 
-    pub async fn delete_theatre_movie(&self, id_: uuid::Uuid) -> Result<(), DatabaseError> {
-        use crate::schema::theatre_movies::dsl::*;
+    pub async fn delete_theatre_screening(&self, id_: uuid::Uuid) -> Result<(), DatabaseError> {
+        use crate::schema::theatre_screenings::dsl::*;
 
         let conn = self.pool.get().await?;
 
         conn.interact(move |conn| {
-            diesel::delete(theatre_movies)
+            diesel::delete(theatre_screenings)
                 .filter(id.eq(id_))
                 .execute(conn)
         })

@@ -35,12 +35,6 @@ struct MovieReviewQuery {
     sort_by: SortBy
 }
 
-#[derive(Serialize)]
-#[serde(tag = "type")]
-enum QueryErrorType {
-    ValidationErrors(ValidationErrors),
-}
-
 #[post("/review/new")]
 async fn submit_new_review(
     new_review: web::Json<NewReviewPayload>,
