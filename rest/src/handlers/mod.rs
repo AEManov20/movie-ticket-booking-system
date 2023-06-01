@@ -19,6 +19,7 @@ pub mod auth;
 pub mod movie;
 pub mod theatre;
 pub mod user;
+pub mod role;
 
 #[derive(Serialize, Debug)]
 #[serde(tag = "type", content = "data")]

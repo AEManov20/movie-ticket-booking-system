@@ -2,9 +2,11 @@ use actix_web::dev::Payload;
 use actix_web::error::{ErrorInternalServerError, ErrorUnauthorized};
 use actix_web::{http, FromRequest, HttpRequest};
 use chrono::{DateTime, NaiveDateTime, Utc};
+use diesel::backend::Backend;
 use diesel::prelude::*;
 use diesel::sql_types::{Date, Json, Timestamptz};
 use jsonwebtoken::{decode, DecodingKey, Validation};
+use serde::de::value;
 use serde::{Deserialize, Serialize};
 use std::future::{ready, Ready};
 use validator::Validate;
@@ -64,12 +66,12 @@ pub struct LoginUser {
 
 #[derive(Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations)]
 #[diesel(belongs_to(User, foreign_key = owner_user_id))]
-#[diesel(belongs_to(TheatreMovie))]
+#[diesel(belongs_to(TheatreScreening))]
 #[diesel(belongs_to(TicketType))]
 pub struct Ticket {
     pub id: uuid::Uuid,
     pub owner_user_id: uuid::Uuid,
-    pub theatre_movie_id: uuid::Uuid,
+    pub theatre_screening_id: uuid::Uuid,
     pub ticket_type_id: uuid::Uuid,
     pub issuer_user_id: uuid::Uuid,
     pub seat_row: i32,
@@ -91,7 +93,7 @@ pub struct FormTicket {
 #[diesel(table_name = tickets)]
 pub struct CreateTicket {
     pub owner_user_id: uuid::Uuid,
-    pub theatre_movie_id: uuid::Uuid,
+    pub theatre_screening_id: uuid::Uuid,
     pub ticket_type_id: uuid::Uuid,
     pub issuer_user_id: uuid::Uuid,
     pub seat_row: i32,
@@ -102,27 +104,25 @@ pub struct CreateTicket {
 #[diesel(belongs_to(Hall))]
 #[diesel(belongs_to(Movie))]
 #[diesel(belongs_to(Theatre))]
-pub struct TheatreMovie {
+pub struct TheatreScreening {
     pub id: uuid::Uuid,
     pub movie_id: uuid::Uuid,
     pub theatre_id: uuid::Uuid,
     pub hall_id: uuid::Uuid,
-    pub subtitles_language: Option<String>,
-    pub audio_language: String,
+    pub subtitles_language: Option<uuid::Uuid>,
+    pub audio_language: uuid::Uuid,
     pub starting_time: chrono::NaiveDateTime,
     pub status: i32,
 }
 
 #[derive(Insertable, Deserialize, AsChangeset, Validate)]
-#[diesel(table_name = theatre_movies)]
-pub struct FormTheatreMovie {
+#[diesel(table_name = theatre_screenings)]
+pub struct FormTheatreScreening {
     pub movie_id: uuid::Uuid,
     pub theatre_id: uuid::Uuid,
     pub hall_id: uuid::Uuid,
-    #[validate(length(min = 4))]
-    pub subtitles_language: Option<String>,
-    #[validate(length(min = 4))]
-    pub audio_language: String,
+    pub subtitles_language: Option<uuid::Uuid>,
+    pub audio_language: uuid::Uuid,
     pub starting_time: chrono::NaiveDateTime,
 }
 
@@ -253,14 +253,41 @@ pub struct UpdateTheatrePermission {
 #[derive(Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations)]
 #[diesel(belongs_to(Theatre))]
 pub struct TicketType {
-    id: uuid::Uuid,
-    type_: String,
+    pub id: uuid::Uuid,
+    pub type_: String,
     // a.k.a. template_type
-    movie_type: String,
-    description: Option<String>,
-    theatre_id: uuid::Uuid,
-    currency: String,
-    price: f64,
+    pub movie_type: String,
+    pub description: Option<String>,
+    pub theatre_id: uuid::Uuid,
+    pub currency: String,
+    pub price: f64,
+}
+
+#[derive(Identifiable, Insertable, Queryable, Serialize, Debug, Clone, Associations)]
+#[diesel(belongs_to(User))]
+#[diesel(belongs_to(Theatre))]
+#[diesel(belongs_to(TheatreRole, foreign_key = role_id))]
+#[diesel(primary_key(user_id, role_id, theatre_id))]
+#[diesel(table_name = users_theatre_roles)]
+pub struct UserTheatreRole {
+    pub user_id: uuid::Uuid,
+    pub role_id: uuid::Uuid,
+    pub theatre_id: uuid::Uuid,
+}
+
+#[derive(Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset)]
+pub struct TheatreRole {
+    pub id: uuid::Uuid,
+    pub name: String
+}
+
+#[derive(Debug)]
+pub enum Role {
+    TheatreOwner,
+    TicketManager,
+    TicketChecker,
+    UserManager,
+    ScreeningsManager
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -295,6 +322,25 @@ pub struct FormTicketType {
     theatre_id: uuid::Uuid,
     currency: String,
     price: f64,
+}
+
+impl Role {
+    pub fn try_from_str(value: &str) -> Option<Self> {
+        match value {
+            "TheatreOwner" => Some(Role::TheatreOwner),
+            "TicketManager" => Some(Role::TicketManager),
+            "TicketChecker" => Some(Role::TicketChecker),
+            "ScreeningsManager" => Some(Role::ScreeningsManager),
+            "UserManager" => Some(Role::UserManager),
+            _ => None
+        }
+    }
+}
+
+impl std::fmt::Display for Role {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 impl From<User> for SlimUser {

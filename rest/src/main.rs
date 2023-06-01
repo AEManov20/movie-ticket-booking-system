@@ -7,7 +7,7 @@ mod util;
 mod vars;
 
 use actix_web::{web, App, HttpResponse, HttpServer, Responder};
-use services::{movie::MovieService, theatre::TheatreService, user::UserService};
+use services::{movie::MovieService, theatre::TheatreService, user::UserService, bridge_role::BridgeRoleService, role::RoleService};
 use util::get_connection_pool;
 
 async fn root_response() -> impl Responder {
@@ -24,6 +24,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let movie_service = MovieService::new(pool.clone());
     let theatre_service = TheatreService::new(pool.clone());
     let user_service = UserService::new(pool.clone());
+    let bridge_role_service = BridgeRoleService::new(pool.clone());
+    let role_service = RoleService::new(pool.clone());
 
     HttpServer::new(move || {
         App::new()
@@ -31,6 +33,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .app_data(web::Data::new(movie_service.clone()))
             .app_data(web::Data::new(theatre_service.clone()))
             .app_data(web::Data::new(user_service.clone()))
+            .app_data(web::Data::new(bridge_role_service.clone()))
+            .app_data(web::Data::new(role_service.clone()))
             .route("/", web::get().to(root_response))
             .service(
                 web::scope("/api/v1")

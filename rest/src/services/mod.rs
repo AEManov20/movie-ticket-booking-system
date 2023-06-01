@@ -1,6 +1,9 @@
 pub mod movie;
 pub mod theatre;
 pub mod user;
+pub mod bridge_role;
+pub mod role;
+pub mod language;
 
 use argon2::password_hash;
 use deadpool_diesel::{InteractError, PoolError};

@@ -65,6 +65,13 @@ diesel::table! {
 }
 
 diesel::table! {
+    theatre_roles (id) {
+        id -> Uuid,
+        name -> Varchar,
+    }
+}
+
+diesel::table! {
     theatre_screenings (id) {
         id -> Uuid,
         movie_id -> Uuid,
@@ -130,6 +137,14 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    users_theatre_roles (user_id, role_id, theatre_id) {
+        user_id -> Uuid,
+        role_id -> Uuid,
+        theatre_id -> Uuid,
+    }
+}
+
 diesel::joinable!(external_credentials -> users (user_id));
 diesel::joinable!(halls -> theatres (theatre_id));
 diesel::joinable!(movie_reviews -> movies (movie_id));
@@ -143,6 +158,9 @@ diesel::joinable!(ticket_types -> theatres (theatre_id));
 diesel::joinable!(tickets -> theatre_screenings (theatre_screening_id));
 diesel::joinable!(tickets -> ticket_types (ticket_type_id));
 diesel::joinable!(tickets -> users (owner_user_id));
+diesel::joinable!(users_theatre_roles -> theatre_roles (role_id));
+diesel::joinable!(users_theatre_roles -> theatres (theatre_id));
+diesel::joinable!(users_theatre_roles -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     external_credentials,
@@ -151,9 +169,11 @@ diesel::allow_tables_to_appear_in_same_query!(
     movie_reviews,
     movies,
     theatre_permissions,
+    theatre_roles,
     theatre_screenings,
     theatres,
     ticket_types,
     tickets,
     users,
+    users_theatre_roles,
 );
