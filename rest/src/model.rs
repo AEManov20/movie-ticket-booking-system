@@ -313,13 +313,14 @@ pub struct JwtClaims {
 #[diesel(table_name = ticket_types)]
 pub struct FormTicketType {
     #[serde(alias = "type")]
-    type_: String,
+    #[serde(rename(serialize = "type"))]
+    pub type_: String,
     // a.k.a. template_type
-    movie_type: String,
-    description: String,
-    theatre_id: uuid::Uuid,
-    currency: String,
-    price: f64,
+    pub movie_type: String,
+    pub description: String,
+    pub theatre_id: uuid::Uuid,
+    pub currency: String,
+    pub price: f64,
 }
 
 impl Role {

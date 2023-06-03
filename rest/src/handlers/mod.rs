@@ -45,8 +45,16 @@ async fn user_res_from_jwt(
     user_service: &UserService,
 ) -> std::result::Result<(UserResource, User), ErrorType> {
     let JwtType::User(user_id) = claims.dat else {
-        return Err(ErrorType::Invalid)
+        return Err(ErrorType::NoAuth)
     };
+
+    let Some(exp_time) = chrono::NaiveDateTime::from_timestamp_opt(claims.exp as i64, 0) else {
+        return Err(ErrorType::ServerError)
+    };
+    
+    if chrono::Utc::now() < chrono::DateTime::<chrono::Utc>::from_utc(exp_time, chrono::Utc) {
+        return Err(ErrorType::NoAuth)
+    }
 
     let user = user_service.get_by_id(user_id).await?;
 
