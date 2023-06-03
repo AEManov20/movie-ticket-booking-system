@@ -159,7 +159,6 @@ impl UserService {
 #[derive(Serialize)]
 pub struct LoginResponse {
     token: String,
-    refresh_token: String,
 }
 
 #[derive(Clone)]
@@ -186,21 +185,8 @@ impl UserResource {
             &EncodingKey::from_secret(jwt_user_secret().as_bytes()),
         )?;
 
-        let refresh_token = encode(
-            &Header::new(*JWT_ALGO),
-            &JwtClaims {
-                dat: JwtType::Refresh(self.user.id),
-                sub: self.user.id,
-                iat: chrono::Utc::now().timestamp(),
-                exp: (chrono::Utc::now() + chrono::Duration::days(USER_REFRESH_TOKEN_EXPIRY_DAYS))
-                    .timestamp(),
-            },
-            &EncodingKey::from_secret(jwt_user_secret().as_bytes()),
-        )?;
-
         Ok(LoginResponse {
             token,
-            refresh_token,
         })
     }
 

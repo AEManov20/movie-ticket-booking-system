@@ -299,8 +299,6 @@ pub enum JwtType {
     Email(uuid::Uuid),
     // id (User)
     User(uuid::Uuid),
-    // id (User)
-    Refresh(uuid::Uuid),
 }
 
 #[derive(Serialize, Deserialize, Clone)]

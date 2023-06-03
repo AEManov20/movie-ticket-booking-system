@@ -56,6 +56,7 @@ impl RoleService {
             .cloned())
     }
 
+    /// fetches a `Vec` of `TheatreRole`
     pub async fn get_all_roles(&self) -> Result<Vec<TheatreRole>, DatabaseError> {
         use crate::schema::theatre_roles::dsl::*;
 
