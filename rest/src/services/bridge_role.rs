@@ -17,7 +17,7 @@ impl BridgeRoleService {
         Self { pool }
     }
 
-    async fn register_role(
+    pub async fn register_role(
         &self,
         role: UserTheatreRole,
     ) -> Result<Option<UserTheatreRole>, DatabaseError> {
@@ -36,7 +36,7 @@ impl BridgeRoleService {
             .cloned())
     }
 
-    async fn unregister_roles(
+    pub async fn unregister_roles(
         &self,
         uid: Option<uuid::Uuid>,
         tid: Option<uuid::Uuid>,
@@ -64,7 +64,7 @@ impl BridgeRoleService {
         Ok(())
     }
 
-    async fn get_roles(
+    pub async fn get_roles(
         &self,
         uid: Option<uuid::Uuid>,
         tid: Option<uuid::Uuid>,

@@ -48,14 +48,6 @@ async fn user_res_from_jwt(
         return Err(ErrorType::NoAuth)
     };
 
-    let Some(exp_time) = chrono::NaiveDateTime::from_timestamp_opt(claims.exp as i64, 0) else {
-        return Err(ErrorType::ServerError)
-    };
-    
-    if chrono::Utc::now() < chrono::DateTime::<chrono::Utc>::from_utc(exp_time, chrono::Utc) {
-        return Err(ErrorType::NoAuth)
-    }
-
     let user = user_service.get_by_id(user_id).await?;
 
     match user {
@@ -68,7 +60,8 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.configure(auth::config)
         .configure(movie::config)
         .configure(theatre::config)
-        .configure(user::config);
+        .configure(user::config)
+        .configure(role::config);
 }
 
 impl<T> From<T> for SuccessResponse<T>

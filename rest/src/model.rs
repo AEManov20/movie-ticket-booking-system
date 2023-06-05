@@ -380,16 +380,16 @@ impl FromRequest for JwtClaims {
             ) {
                 Ok(c) => {
                     if Utc::now().timestamp() > c.claims.exp {
-                        return ready(Err(ErrorType::Expired));
+                        return ready(Err(ErrorType::NoAuth));
                     }
 
                     if let JwtType::User(_) = c.claims.dat {
                         Ok(c.claims)
                     } else {
-                        Err(ErrorType::Invalid)
+                        Err(ErrorType::NoAuth)
                     }
                 }
-                Err(_) => Err(ErrorType::Invalid),
+                Err(_) => Err(ErrorType::NoAuth),
             },
         )
     }
