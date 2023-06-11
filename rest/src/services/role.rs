@@ -43,14 +43,14 @@ impl RoleService {
     }
 
     /// fetches a `TheatreRole` by name
-    pub async fn get_role_by_name(&self, nm: String) -> Result<Option<TheatreRole>, DatabaseError> {
+    pub async fn get_role_by_name(&self, nm: Role) -> Result<Option<TheatreRole>, DatabaseError> {
         use crate::schema::theatre_roles::dsl::*;
 
         Ok(self
             .pool
             .get()
             .await?
-            .interact(move |conn| theatre_roles.filter(name.eq(nm)).limit(1).load(conn))
+            .interact(move |conn| theatre_roles.filter(name.eq(nm.to_string())).limit(1).load(conn))
             .await??
             .first()
             .cloned())

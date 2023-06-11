@@ -1,17 +1,24 @@
 use std::collections::HashMap;
 
 use crate::{
-    model::UserTheatreRole,
-    services::{bridge_role::BridgeRoleService, role::RoleService},
+    model::{Role, UserTheatreRole},
+    services::{bridge_role::BridgeRoleService, role::RoleService}, check_roles,
 };
 
 use super::*;
 
 #[derive(Deserialize)]
 struct BridgeRoleQuery {
-    role_id: Option<uuid::Uuid>,
+    role_id: uuid::Uuid,
     user_id: Option<uuid::Uuid>,
-    theatre_id: Option<uuid::Uuid>,
+    theatre_id: uuid::Uuid,
+}
+
+#[derive(Deserialize)]
+struct BridgeRoleForm {
+    role_id: uuid::Uuid,
+    user_id: uuid::Uuid,
+    theatre_id: uuid::Uuid,
 }
 
 #[get("/available")]
@@ -33,21 +40,93 @@ async fn query_bridge_roles(
     role_service: web::Data<RoleService>,
     bridge_role_service: web::Data<BridgeRoleService>,
     user_service: web::Data<UserService>,
-    claims: JwtClaims
+    claims: JwtClaims,
 ) -> Result<Vec<UserTheatreRole>> {
-    let (user_res, user) = user_res_from_jwt(&claims, &user_service).await?;
+    let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
 
-    Ok(bridge_role_service.get_roles(query.role_id, query.user_id, query.theatre_id).await?.into())
+    if !user.is_super_user {
+        check_roles!(
+            [Role::TheatreOwner, Role::UserManager],
+            user.id,
+            query.theatre_id,
+            bridge_role_service,
+            role_service
+        );
+    }
+
+    Ok(bridge_role_service
+        .get_roles(Some(query.role_id), query.user_id, Some(query.theatre_id))
+        .await?
+        .into())
 }
 
 #[post("/new")]
-async fn register_bridge_role(role_service: web::Data<RoleService>) -> Result<UserTheatreRole> {
-    todo!();
+async fn register_bridge_role(
+    form: web::Json<BridgeRoleForm>,
+    bridge_role_service: web::Data<BridgeRoleService>,
+    role_service: web::Data<RoleService>,
+    user_service: web::Data<UserService>,
+    claims: JwtClaims,
+) -> Result<Option<UserTheatreRole>> {
+    let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
+
+    if !user.is_super_user {
+        check_roles!(
+            [Role::TheatreOwner, Role::UserManager],
+            user.id,
+            form.theatre_id,
+            bridge_role_service,
+            role_service
+        );
+    }
+
+    let new_role = UserTheatreRole {
+        user_id: form.user_id,
+        role_id: form.role_id,
+        theatre_id: form.theatre_id,
+    };
+
+    if bridge_role_service.role_exists(new_role.clone()).await? {
+        return Err(ErrorType::Conflict);
+    }
+
+    Ok(bridge_role_service.register_role(new_role).await?.into())
 }
 
 #[delete("/{id}")]
-async fn unregister_bridge_role(role_service: web::Data<RoleService>) -> Result<UserTheatreRole> {
-    todo!();
+async fn unregister_bridge_role(
+    form: web::Json<BridgeRoleForm>,
+    bridge_role_service: web::Data<BridgeRoleService>,
+    role_service: web::Data<RoleService>,
+    user_service: web::Data<UserService>,
+    claims: JwtClaims,
+) -> Result<()> {
+    let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
+
+    if !user.is_super_user {
+        check_roles!(
+            [Role::TheatreOwner, Role::UserManager],
+            user.id,
+            form.theatre_id,
+            bridge_role_service,
+            role_service
+        );
+    }
+
+    let del = UserTheatreRole {
+        user_id: form.user_id,
+        role_id: form.role_id,
+        theatre_id: form.theatre_id,
+    };
+
+    if !bridge_role_service.role_exists(del.clone()).await? {
+        return Err(ErrorType::NotFound);
+    }
+
+    Ok(bridge_role_service
+        .unregister_roles(Some(del.user_id), Some(del.theatre_id), Some(del.role_id))
+        .await?
+        .into())
 }
 
 pub fn config(cfg: &mut web::ServiceConfig) {
