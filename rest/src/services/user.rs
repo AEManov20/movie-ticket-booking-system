@@ -15,7 +15,6 @@ use crate::vars::{jwt_email_secret, jwt_ticket_secret, jwt_user_secret};
 
 pub const EMAIL_CONFIRMATION_TOKEN_EXPIRY_DAYS: i64 = 1;
 pub const USER_TOKEN_EXPIRY_DAYS: i64 = 2;
-pub const USER_REFRESH_TOKEN_EXPIRY_DAYS: i64 = 10;
 
 #[derive(Clone)]
 pub struct UserService {

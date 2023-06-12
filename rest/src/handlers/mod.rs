@@ -14,11 +14,12 @@ use crate::{
     },
 };
 
-pub mod auth;
-pub mod movie;
-pub mod role;
-pub mod theatre;
-pub mod user;
+mod auth;
+mod movie;
+mod role;
+mod theatre;
+mod user;
+mod language;
 
 #[derive(Serialize, Debug)]
 #[serde(tag = "type", content = "data")]
@@ -62,7 +63,8 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         .configure(movie::config)
         .configure(theatre::config)
         .configure(user::config)
-        .configure(role::config);
+        .configure(role::config)
+        .configure(language::config);
 }
 
 impl<T> From<T> for SuccessResponse<T>

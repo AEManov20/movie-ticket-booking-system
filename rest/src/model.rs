@@ -284,6 +284,13 @@ pub struct JwtClaims {
     pub exp: i64,
 }
 
+#[derive(Selectable, Identifiable, Insertable, Queryable, Serialize, Deserialize, Debug, Clone)]
+pub struct Language {
+    pub id: uuid::Uuid,
+    pub code: String,
+    pub name: String
+}
+
 #[derive(Insertable, Deserialize, AsChangeset)]
 #[diesel(table_name = ticket_types)]
 pub struct FormTicketType {
