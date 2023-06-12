@@ -1,8 +1,7 @@
 use deadpool_diesel::postgres::Pool;
 use diesel::prelude::*;
-use rayon::prelude::*;
 
-use crate::model::{Role, UserTheatreRole};
+use crate::model::UserTheatreRole;
 
 use super::DatabaseError;
 
@@ -30,7 +29,8 @@ impl BridgeRoleService {
             .interact(move |conn| {
                 diesel::insert_into(users_theatre_roles)
                     .values(roles)
-                    .load(conn)
+                    .returning(UserTheatreRole::as_returning())
+                    .get_results(conn)
             })
             .await??)
     }
@@ -149,7 +149,7 @@ macro_rules! check_role {
 macro_rules! check_roles {
     ([$($role:expr),*], $uid:expr, $tid:expr, $brs:expr, $rs:expr) => {
         $(
-            crate::check_role!($role, $uid, $tid, $brs, $rs);
+            $crate::check_role!($role, $uid, $tid, $brs, $rs);
         )*
     }
 }

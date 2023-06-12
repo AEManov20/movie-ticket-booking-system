@@ -1,7 +1,7 @@
 use deadpool_diesel::postgres::Pool;
 use diesel::prelude::*;
 
-use crate::model::{Role, TheatreRole, UserTheatreRole};
+use crate::model::{Role, TheatreRole};
 
 use super::DatabaseError;
 

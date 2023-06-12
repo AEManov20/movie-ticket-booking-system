@@ -1,7 +1,6 @@
 use actix_web::{
-    delete, get,
-    http::StatusCode,
-    post, put, web, HttpResponse, ResponseError, Responder, body::BoxBody,
+    body::BoxBody, delete, get, http::StatusCode, post, put, web, HttpResponse, Responder,
+    ResponseError,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -17,9 +16,9 @@ use crate::{
 
 pub mod auth;
 pub mod movie;
+pub mod role;
 pub mod theatre;
 pub mod user;
-pub mod role;
 
 #[derive(Serialize, Debug)]
 #[serde(tag = "type", content = "data")]
@@ -52,7 +51,9 @@ async fn user_res_from_jwt(
 
     match user {
         Some(v) => Ok((v.clone(), User::from(v))),
-        None => Err(ErrorType::ServerError),
+        None => Err(ErrorType::Database(DatabaseError::Other(
+            "Database returned nothing.".to_string(),
+        ))),
     }
 }
 
@@ -78,7 +79,7 @@ where
     T: Serialize,
 {
     type Body = BoxBody;
-    
+
     fn respond_to(self, req: &actix_web::HttpRequest) -> HttpResponse<Self::Body> {
         let res = json!({
             "success": true,

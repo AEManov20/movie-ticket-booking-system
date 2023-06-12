@@ -3,7 +3,6 @@
 CREATE TABLE IF NOT EXISTS ticket_types (
     "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     "type" VARCHAR(50) NOT NULL,
-    movie_type VARCHAR(50) NOT NULL,
     "description" VARCHAR(300),
     theatre_id UUID NOT NULL REFERENCES theatres("id"),
 

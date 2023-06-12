@@ -1,9 +1,7 @@
 use argon2::{
-    password_hash::{rand_core::{OsRng, RngCore}, SaltString, Error},
+    password_hash::{rand_core::OsRng, SaltString, Error},
     PasswordHash, PasswordHasher, PasswordVerifier, Argon2,
 };
-
-use crate::schema::users::password_hash;
 
 pub fn hash(password: &[u8]) -> Result<String, Error> {
     let salt = SaltString::generate(&mut OsRng);

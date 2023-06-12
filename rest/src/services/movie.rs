@@ -1,9 +1,7 @@
-use deadpool_diesel::postgres::{Manager, Pool};
+use deadpool_diesel::postgres::Pool;
 use diesel::prelude::*;
-use serde::Deserialize;
 
 use crate::model::*;
-use crate::password;
 
 use super::DatabaseError;
 use super::SortBy;
@@ -18,16 +16,19 @@ impl MovieService {
         Self { pool }
     }
 
-    pub async fn create(&self, movie: FormMovie) -> Result<Option<Movie>, DatabaseError> {
+    pub async fn create(&self, movie: FormMovie) -> Result<Movie, DatabaseError> {
         use crate::schema::movies::dsl::*;
 
         let conn = &mut self.pool.get().await?;
 
         Ok(conn
-            .interact(move |conn| diesel::insert_into(movies).values(movie).load(conn))
-            .await??
-            .first()
-            .cloned())
+            .interact(move |conn| {
+                diesel::insert_into(movies)
+                    .values(movie)
+                    .returning(Movie::as_returning())
+                    .get_result(conn)
+            })
+            .await??)
     }
 
     pub async fn get_by_id(&self, id_: uuid::Uuid) -> Result<Option<Movie>, DatabaseError> {

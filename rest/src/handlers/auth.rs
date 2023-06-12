@@ -55,9 +55,7 @@ async fn register_user(
         return Err(ErrorType::Conflict);
     }
 
-    let Some(user) = user_service.create(user.into_inner()).await? else {
-        return Err(ErrorType::ServerError)
-    };
+    let user = user_service.create(user.into_inner()).await?;
 
     Ok(user.create_email_jwt()?.into())
 }
@@ -75,7 +73,7 @@ async fn verify_email(
         return Err(ErrorType::Invalid)
     };
 
-    let Some(time) = chrono::NaiveDateTime::from_timestamp_opt(claims.exp as i64, 0) else {
+    let Some(time) = chrono::NaiveDateTime::from_timestamp_opt(claims.exp, 0) else {
         return Err(ErrorType::ServerError)
     };
 

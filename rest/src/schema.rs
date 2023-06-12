@@ -12,8 +12,9 @@ diesel::table! {
 diesel::table! {
     halls (id) {
         id -> Uuid,
-        number -> Int4,
         theatre_id -> Uuid,
+        name -> Varchar,
+        price_increase -> Float8,
         seat_data -> Json,
     }
 }
@@ -67,6 +68,7 @@ diesel::table! {
         subtitles_language -> Nullable<Uuid>,
         audio_language -> Uuid,
         starting_time -> Timestamp,
+        is_3d -> Bool,
         status -> Int4,
     }
 }
@@ -86,7 +88,6 @@ diesel::table! {
         id -> Uuid,
         #[sql_name = "type"]
         type_ -> Varchar,
-        movie_type -> Varchar,
         description -> Nullable<Varchar>,
         theatre_id -> Uuid,
         currency -> Varchar,

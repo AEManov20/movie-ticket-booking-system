@@ -1,14 +1,11 @@
-use std::future::{ready, Ready};
-use std::pin::Pin;
-
-use rayon::prelude::*;
 use crate::util::JWT_ALGO;
-use deadpool_diesel::postgres::{Manager, Pool};
+use deadpool_diesel::postgres::Pool;
 use diesel::associations::HasTable;
 use diesel::prelude::*;
 use diesel::result::Error::NotFound;
 use jsonwebtoken::Validation;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header};
+use rayon::prelude::*;
 use serde::Serialize;
 
 use super::DatabaseError;
@@ -30,7 +27,7 @@ impl UserService {
         Self { pool }
     }
 
-    pub async fn create(&self, user: FormUser) -> Result<Option<UserResource>, DatabaseError> {
+    pub async fn create(&self, user: FormUser) -> Result<UserResource, DatabaseError> {
         use crate::schema::users::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -51,16 +48,12 @@ impl UserService {
                         username.eq(user.username.clone()),
                         password_hash.eq(hash),
                     ))
-                    .load(conn)
+                    .returning(User::as_returning())
+                    .get_result::<User>(conn)
             })
-            .await??
-            .first()
-            .cloned();
+            .await??;
 
-        match result {
-            Some(user) => Ok(Some(UserResource::new(user, self.pool.clone()))),
-            None => Ok(None),
-        }
+        Ok(UserResource::new(result, self.pool.clone()))
     }
 
     pub async fn get_by_email(
@@ -267,15 +260,10 @@ impl UserResource {
                         email.eq(new_user.email.clone()),
                         username.eq(new_user.username),
                     ))
-                    .load(conn)
+                    .returning(User::as_returning())
+                    .get_result(conn)
             })
-            .await??
-            .first()
-            .cloned();
-
-        let Some(result) = result else {
-            return Err(DatabaseError::Other("Database returned nothing".to_string()))
-        };
+            .await??;
 
         self.user = result;
 
@@ -284,7 +272,6 @@ impl UserResource {
 
     pub async fn update_password(
         &mut self,
-        old_password: String,
         new_password: String,
     ) -> Result<(), DatabaseError> {
         let conn = self.pool.get().await?;
@@ -294,7 +281,7 @@ impl UserResource {
             id_: uuid::Uuid,
             pass: &[u8],
             conn: &mut PgConnection,
-        ) -> QueryResult<Option<User>> {
+        ) -> QueryResult<User> {
             use crate::schema::users::dsl::*;
 
             let hash = password::hash(pass);
@@ -308,19 +295,16 @@ impl UserResource {
                     Ok(diesel::update(users)
                         .filter(id.eq(id_))
                         .set(password_hash.eq(hash))
-                        .load(conn)?
-                        .first()
-                        .cloned())
+                        .returning(User::as_returning())
+                        .get_result(conn)?)
                 }
                 Err(_) => Err(NotFound),
             }
         }
 
         let Some(ref hash) = self.user.password_hash else {
-            match conn.interact(move |conn| insert_password(user.id, new_password.as_bytes(), conn)).await?? {
-                Some(v) => self.user.password_hash = v.password_hash,
-                None => return Err(DatabaseError::Other("Password could not be updated".to_string()))
-            };
+            let res = conn.interact(move |conn| insert_password(user.id, new_password.as_bytes(), conn)).await??;
+            self.user.password_hash = res.password_hash;
             return Ok(())
         };
 
@@ -348,7 +332,7 @@ impl UserResource {
         ticket_type_id: uuid::Uuid,
         seat_row: i32,
         seat_column: i32,
-    ) -> Result<Option<TicketResource>, DatabaseError> {
+    ) -> Result<TicketResource, DatabaseError> {
         let conn = self.pool.get().await?;
 
         let ticket = CreateTicket {
@@ -364,16 +348,12 @@ impl UserResource {
             .interact(move |conn| {
                 diesel::insert_into(Ticket::table())
                     .values(ticket)
-                    .load(conn)
+                    .returning(Ticket::as_returning())
+                    .get_result(conn)
             })
-            .await??
-            .first()
-            .cloned();
-
-        match result {
-            Some(v) => Ok(Some(TicketResource::new(v, self.pool.clone()))),
-            None => Ok(None),
-        }
+            .await??;
+        
+        Ok(TicketResource::new(result, self.pool.clone()))
     }
 
     pub async fn delete_ticket(&self, id_: uuid::Uuid) -> Result<(), DatabaseError> {
@@ -401,7 +381,7 @@ impl UserResource {
         content: Option<String>,
         rating: f64,
         movie_id: uuid::Uuid,
-    ) -> Result<Option<MovieReview>, DatabaseError> {
+    ) -> Result<MovieReview, DatabaseError> {
         let conn = self.pool.get().await?;
 
         let review = CreateMovieReview {
@@ -415,11 +395,10 @@ impl UserResource {
             .interact(move |conn| {
                 diesel::insert_into(MovieReview::table())
                     .values(&review)
-                    .load(conn)
+                    .returning(MovieReview::as_returning())
+                    .get_result(conn)
             })
-            .await??
-            .first()
-            .cloned())
+            .await??)
     }
 
     pub async fn update_review(
@@ -427,7 +406,7 @@ impl UserResource {
         id_: uuid::Uuid,
         content_: Option<String>,
         rating_: f64,
-    ) -> Result<Option<MovieReview>, DatabaseError> {
+    ) -> Result<MovieReview, DatabaseError> {
         use crate::schema::movie_reviews::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -439,11 +418,10 @@ impl UserResource {
                     .filter(id.eq(id_))
                     .filter(author_user_id.eq(user_id))
                     .set((content.eq(content_), rating.eq(rating_)))
-                    .load(conn)
+                    .returning(MovieReview::as_returning())
+                    .get_result(conn)
             })
-            .await??
-            .first()
-            .cloned())
+            .await??)
     }
 
     pub async fn delete_review(&self, id_: uuid::Uuid) -> Result<(), DatabaseError> {

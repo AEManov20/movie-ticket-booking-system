@@ -1,12 +1,8 @@
 use actix_web::dev::Payload;
-use actix_web::error::{ErrorInternalServerError, ErrorUnauthorized};
 use actix_web::{http, FromRequest, HttpRequest};
-use chrono::{DateTime, NaiveDateTime, Utc};
-use diesel::backend::Backend;
+use chrono::Utc;
 use diesel::prelude::*;
-use diesel::sql_types::{Date, Json, Timestamptz};
 use jsonwebtoken::{decode, DecodingKey, Validation};
-use serde::de::value;
 use serde::{Deserialize, Serialize};
 use std::future::{ready, Ready};
 use validator::Validate;
@@ -15,7 +11,7 @@ use crate::schema::*;
 use crate::util::JWT_ALGO;
 use crate::vars::jwt_user_secret;
 
-#[derive(Identifiable, Queryable, Debug, Clone, AsChangeset)]
+#[derive(Selectable, Identifiable, Queryable, Debug, Clone, AsChangeset)]
 pub struct User {
     pub id: uuid::Uuid,
     pub first_name: String,
@@ -65,7 +61,7 @@ pub struct LoginUser {
     pub password: String,
 }
 
-#[derive(Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations)]
+#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations)]
 #[diesel(belongs_to(User, foreign_key = owner_user_id))]
 #[diesel(belongs_to(TheatreScreening))]
 #[diesel(belongs_to(TicketType))]
@@ -101,7 +97,7 @@ pub struct CreateTicket {
     pub seat_column: i32,
 }
 
-#[derive(Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations)]
+#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations)]
 #[diesel(belongs_to(Hall))]
 #[diesel(belongs_to(Movie))]
 #[diesel(belongs_to(Theatre))]
@@ -113,6 +109,7 @@ pub struct TheatreScreening {
     pub subtitles_language: Option<uuid::Uuid>,
     pub audio_language: uuid::Uuid,
     pub starting_time: chrono::NaiveDateTime,
+    pub is_3d: bool,
     pub status: i32,
 }
 
@@ -125,26 +122,38 @@ pub struct FormTheatreScreening {
     pub subtitles_language: Option<uuid::Uuid>,
     pub audio_language: uuid::Uuid,
     pub starting_time: chrono::NaiveDateTime,
+    pub is_3d: Option<bool>,
+}
+
+#[derive(Serialize, Queryable)]
+pub struct TheatreScreeningEvent {
+    pub movie_id: uuid::Uuid,
+    pub theatre_movie_id: uuid::Uuid,
+    pub starting_time: chrono::NaiveDateTime,
+    pub length: f64,
+    pub movie_name: String,
 }
 
 #[derive(Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations)]
 #[diesel(belongs_to(Theatre))]
 pub struct Hall {
     pub id: uuid::Uuid,
-    pub number: i32,
     pub theatre_id: uuid::Uuid,
+    pub name: String,
+    pub price_increase: f64,
     pub seat_data: serde_json::Value,
 }
 
 #[derive(Insertable, Deserialize, AsChangeset)]
 #[diesel(table_name = halls)]
 pub struct FormHall {
-    pub number: i32,
+    pub name: String,
     pub theatre_id: uuid::Uuid,
+    pub price_increase: Option<f64>,
     pub seat_data: serde_json::Value,
 }
 
-#[derive(Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset)]
+#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset)]
 pub struct Theatre {
     pub id: uuid::Uuid,
     pub name: String,
@@ -162,7 +171,7 @@ pub struct FormTheatre {
     pub location_lon: f64,
 }
 
-#[derive(Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset)]
+#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset)]
 pub struct Movie {
     pub id: uuid::Uuid,
     pub name: String,
@@ -188,7 +197,7 @@ pub struct FormMovie {
     pub imdb_link: Option<String>,
 }
 
-#[derive(Identifiable, Associations, Queryable, Serialize, Debug, Clone, AsChangeset)]
+#[derive(Selectable, Identifiable, Associations, Queryable, Serialize, Debug, Clone, AsChangeset)]
 #[diesel(belongs_to(User, foreign_key = author_user_id))]
 #[diesel(belongs_to(Movie))]
 pub struct MovieReview {
@@ -216,20 +225,20 @@ pub struct FormMovieReview {
     pub rating: f64,
 }
 
-#[derive(Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations)]
+#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations)]
 #[diesel(belongs_to(Theatre))]
 pub struct TicketType {
     pub id: uuid::Uuid,
+    #[serde(alias = "type")]
+    #[serde(rename(serialize = "type"))]
     pub type_: String,
-    // a.k.a. template_type
-    pub movie_type: String,
     pub description: Option<String>,
     pub theatre_id: uuid::Uuid,
     pub currency: String,
     pub price: f64,
 }
 
-#[derive(Identifiable, Insertable, Queryable, Serialize, Deserialize, Debug, Clone, Associations)]
+#[derive(Selectable, Identifiable, Insertable, Queryable, Serialize, Deserialize, Debug, Clone, Associations)]
 #[diesel(belongs_to(User))]
 #[diesel(belongs_to(Theatre))]
 #[diesel(belongs_to(TheatreRole, foreign_key = role_id))]
@@ -281,8 +290,6 @@ pub struct FormTicketType {
     #[serde(alias = "type")]
     #[serde(rename(serialize = "type"))]
     pub type_: String,
-    // a.k.a. template_type
-    pub movie_type: String,
     pub description: String,
     pub theatre_id: uuid::Uuid,
     pub currency: String,

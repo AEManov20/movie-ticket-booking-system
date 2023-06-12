@@ -1,11 +1,10 @@
-use deadpool_diesel::postgres::{Manager, Pool};
+use chrono::{NaiveDate, NaiveDateTime};
+use deadpool_diesel::postgres::Pool;
 use diesel::prelude::*;
 use rayon::prelude::*;
 
-use crate::model::*;
-use crate::password;
-use crate::schema::tickets::owner_user_id;
 use super::DatabaseError;
+use crate::model::*;
 
 #[derive(Copy, Clone, Debug, Default)]
 struct Point {
@@ -23,54 +22,49 @@ impl TheatreService {
         Self { pool }
     }
 
-    pub async fn create(
-        &self,
-        theatre: FormTheatre,
-    ) -> Result<Option<TheatreResource>, DatabaseError> {
+    pub async fn create(&self, theatre: FormTheatre) -> Result<TheatreResource, DatabaseError> {
         use crate::schema::theatres::dsl::*;
 
         let conn = self.pool.get().await?;
 
-        let Some(theatre) = conn
-            .interact(|conn| diesel::insert_into(theatres).values(theatre).load::<Theatre>(conn))
-            .await??
-            .first()
-            .cloned() else {
-                return Ok(None)
-            };
+        let theatre = conn
+            .interact(|conn| {
+                diesel::insert_into(theatres)
+                    .values(theatre)
+                    .returning(Theatre::as_returning())
+                    .get_result(conn)
+            })
+            .await??;
 
-        Ok(Some(TheatreResource {
+        Ok(TheatreResource {
             theatre,
             pool: self.pool.clone(),
-        }))
+        })
     }
 
     pub async fn update(
         &self,
         id_: uuid::Uuid,
         theatre: FormTheatre,
-    ) -> Result<Option<TheatreResource>, DatabaseError> {
+    ) -> Result<TheatreResource, DatabaseError> {
         use crate::schema::theatres::dsl::*;
 
         let conn = self.pool.get().await?;
 
-        let Some(theatre) = conn
+        let theatre = conn
             .interact(move |conn| {
                 diesel::update(theatres)
                     .filter(id.eq(id_))
                     .set(theatre)
-                    .load::<Theatre>(conn)
+                    .returning(Theatre::as_returning())
+                    .get_result(conn)
             })
-            .await??
-            .first()
-            .cloned() else {
-                return Ok(None);
-            };
+            .await??;
 
-        Ok(Some(TheatreResource {
+        Ok(TheatreResource {
             theatre,
             pool: self.pool.clone(),
-        }))
+        })
     }
 
     pub async fn get_by_name(
@@ -93,14 +87,17 @@ impl TheatreService {
             .cloned() else {
                 return Ok(None)
             };
-        
+
         Ok(Some(TheatreResource {
             theatre,
             pool: self.pool.clone(),
         }))
     }
 
-    pub async fn get_by_id(&self, id_: uuid::Uuid) -> Result<Option<TheatreResource>, DatabaseError> {
+    pub async fn get_by_id(
+        &self,
+        id_: uuid::Uuid,
+    ) -> Result<Option<TheatreResource>, DatabaseError> {
         use crate::schema::theatres::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -177,7 +174,7 @@ impl TheatreResource {
         &self,
         id_: uuid::Uuid,
         new_ticket_type: FormTicketType,
-    ) -> Result<Option<TicketType>, DatabaseError> {
+    ) -> Result<TicketType, DatabaseError> {
         use crate::schema::ticket_types::dsl::*;
         let conn = self.pool.get().await?;
 
@@ -186,28 +183,26 @@ impl TheatreResource {
                 diesel::update(ticket_types)
                     .filter(id.eq(id_))
                     .set(&new_ticket_type)
-                    .load(conn)
+                    .returning(TicketType::as_returning())
+                    .get_result(conn)
             })
-            .await??
-            .first()
-            .cloned())
+            .await??)
     }
 
     pub async fn create_ticket_type(
         &self,
         new_ticket_type: FormTicketType,
-    ) -> Result<Option<TicketType>, DatabaseError> {
+    ) -> Result<TicketType, DatabaseError> {
         let conn = self.pool.get().await?;
 
         Ok(conn
             .interact(move |conn| {
                 diesel::insert_into(crate::schema::ticket_types::table)
                     .values(&new_ticket_type)
-                    .load(conn)
+                    .returning(TicketType::as_returning())
+                    .get_result(conn)
             })
-            .await??
-            .first()
-            .cloned())
+            .await??)
     }
 
     pub async fn delete_ticket_type(&self, id_: uuid::Uuid) -> Result<(), DatabaseError> {
@@ -234,7 +229,7 @@ impl TheatreResource {
     ) -> Result<Vec<Ticket>, DatabaseError> {
         use crate::schema::tickets::dsl::*;
 
-        let mut conn = self.pool.get().await?;
+        let conn = self.pool.get().await?;
 
         Ok(conn
             .interact(move |conn| {
@@ -260,6 +255,101 @@ impl TheatreResource {
             })
             .await??)
     }
+
+    pub async fn query_screening_events(
+        &self,
+        start_date: NaiveDateTime,
+        end_date: Option<NaiveDateTime>,
+    ) -> Result<Vec<TheatreScreeningEvent>, DatabaseError> {
+        use crate::schema::*;
+
+        let conn = self.pool.get().await?;
+
+        let mut query = theatre_screenings::table
+            .inner_join(movies::table)
+            .select((
+                movies::id,
+                theatre_screenings::id,
+                theatre_screenings::starting_time,
+                movies::length,
+                movies::name,
+            ))
+            .filter(theatre_screenings::starting_time.gt(start_date))
+            .into_boxed();
+
+        if let Some(end_date) = end_date {
+            query = query.filter(theatre_screenings::starting_time.lt(end_date))
+        }
+
+        Ok(conn.interact(move |conn| query.load(conn)).await??)
+    }
+
+    pub async fn get_theatre_screening(
+        &self,
+        id_: uuid::Uuid,
+    ) -> Result<Option<TheatreScreening>, DatabaseError> {
+        use crate::schema::*;
+
+        let conn = self.pool.get().await?;
+
+        let query = theatre_screenings::table.filter(theatre_screenings::id.eq(id_));
+
+        Ok(conn
+            .interact(move |conn| query.load(conn))
+            .await??
+            .first()
+            .cloned())
+    }
+
+    pub async fn create_theatre_screening(
+        &self,
+        theatre_screening: FormTheatreScreening,
+    ) -> Result<TheatreScreening, DatabaseError> {
+        let conn = self.pool.get().await?;
+
+        Ok(conn
+            .interact(|conn| {
+                diesel::insert_into(crate::schema::theatre_screenings::table)
+                    .values(theatre_screening)
+                    .returning(TheatreScreening::as_returning())
+                    .get_result(conn)
+            })
+            .await??)
+    }
+
+    pub async fn update_theatre_screening(
+        &self,
+        id_: uuid::Uuid,
+        new_theatre_screening: FormTheatreScreening,
+    ) -> Result<TheatreScreening, DatabaseError> {
+        use crate::schema::theatre_screenings::dsl::*;
+
+        let conn = self.pool.get().await?;
+
+        Ok(conn
+            .interact(move |conn| {
+                diesel::update(theatre_screenings)
+                    .filter(id.eq(id_))
+                    .set(new_theatre_screening)
+                    .returning(TheatreScreening::as_returning())
+                    .get_result(conn)
+            })
+            .await??)
+    }
+
+    pub async fn delete_theatre_screening(&self, id_: uuid::Uuid) -> Result<(), DatabaseError> {
+        use crate::schema::theatre_screenings::dsl::*;
+
+        let conn = self.pool.get().await?;
+
+        conn.interact(move |conn| {
+            diesel::delete(theatre_screenings)
+                .filter(id.eq(id_))
+                .execute(conn)
+        })
+        .await??;
+        Ok(())
+    }
 }
 
 pub struct HallResource {
@@ -276,58 +366,6 @@ impl HallResource {
         Ok(conn
             .interact(move |conn| TheatreScreening::belonging_to(&hall).load(conn))
             .await??)
-    }
-
-    pub async fn new_theatre_screening(
-        &self,
-        theatre_movie: FormTheatreScreening,
-    ) -> Result<Option<TheatreScreening>, DatabaseError> {
-        let conn = self.pool.get().await?;
-
-        Ok(conn
-            .interact(|conn| {
-                diesel::insert_into(crate::schema::theatre_screenings::table)
-                    .values(theatre_movie)
-                    .load(conn)
-            })
-            .await??
-            .first()
-            .cloned())
-    }
-
-    pub async fn update_theatre_screening(
-        &self,
-        id_: uuid::Uuid,
-        new_theatre_screening: FormTheatreScreening,
-    ) -> Result<Option<TheatreScreening>, DatabaseError> {
-        use crate::schema::theatre_screenings::dsl::*;
-
-        let conn = self.pool.get().await?;
-
-        Ok(conn
-            .interact(move |conn| {
-                diesel::update(theatre_screenings)
-                    .filter(id.eq(id_))
-                    .set(new_theatre_screening)
-                    .load(conn)
-            })
-            .await??
-            .first()
-            .cloned())
-    }
-
-    pub async fn delete_theatre_screening(&self, id_: uuid::Uuid) -> Result<(), DatabaseError> {
-        use crate::schema::theatre_screenings::dsl::*;
-
-        let conn = self.pool.get().await?;
-
-        conn.interact(move |conn| {
-            diesel::delete(theatre_screenings)
-                .filter(id.eq(id_))
-                .execute(conn)
-        })
-        .await??;
-        Ok(())
     }
 }
 

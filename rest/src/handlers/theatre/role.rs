@@ -32,7 +32,7 @@ async fn get_all_roles(
     user_service: web::Data<UserService>,
     claims: JwtClaims,
 ) -> Result<HashMap<uuid::Uuid, uuid::Uuid>> {
-    let (user_res, user) = user_res_from_jwt(&claims, &user_service).await?;
+    let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let theatre_id = path.0;
 
     if !user.is_super_user {
@@ -63,7 +63,7 @@ async fn update_roles_batch(
     user_service: web::Data<UserService>,
     claims: JwtClaims,
 ) -> Result<()> {
-    let (user_res, user) = user_res_from_jwt(&claims, &user_service).await?;
+    let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let theatre_id = path.0;
 
     if !user.is_super_user {

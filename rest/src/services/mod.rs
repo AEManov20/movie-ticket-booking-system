@@ -11,9 +11,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Copy, Clone)]
 pub enum SortBy {
-    #[serde(alias = "newest")]
     Newest,
-    #[serde(alias = "oldest")]
     Oldest,
 }
 

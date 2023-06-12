@@ -1,7 +1,7 @@
 use super::*;
 
 use crate::{
-    model::{FormMovie, JwtClaims, JwtType, MovieReview, User, Movie, Theatre},
+    model::{FormMovie, JwtClaims, MovieReview, Movie, Theatre},
     services::{
         SortBy,
         movie::MovieService,
@@ -43,10 +43,7 @@ async fn submit_new_review(
 ) -> Result<MovieReview> {
     let (user_res, _) = user_res_from_jwt(&claims, &user_service).await?;
 
-    match user_res.create_review(new_review.content.clone(), new_review.rating, new_review.movie_id).await? {
-        Some(v) => Ok(v.into()),
-        None => Err(ErrorType::ServerError)
-    }
+    Ok(user_res.create_review(new_review.content.clone(), new_review.rating, new_review.movie_id).await?.into())
 }
 
 #[get("/review/{id}")]
@@ -123,10 +120,7 @@ async fn insert_movie(movie: web::Json<FormMovie>, movie_service: web::Data<Movi
 
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     if user.is_super_user {
-        match movie_service.create(movie.into_inner()).await? {
-            Some(v) => Ok(v.into()),
-            None => Err(ErrorType::ServerError)
-        }
+        Ok(movie_service.create(movie.into_inner()).await?.into())
     } else {
         Err(ErrorType::InsufficientPermission)
     }

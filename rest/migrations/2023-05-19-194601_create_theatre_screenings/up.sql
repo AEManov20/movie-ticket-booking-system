@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS theatre_screenings (
     subtitles_language UUID,
     audio_language UUID NOT NULL,
     starting_time TIMESTAMP NOT NULL,
+    is_3d BOOL NOT NULL DEFAULT FALSE,
     -- 0 - not yet started
     -- 1 - adverts are running
     -- 2 - movie is running
