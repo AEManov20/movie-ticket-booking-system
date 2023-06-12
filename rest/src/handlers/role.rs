@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use rayon::prelude::*;
+
 use crate::{
     model::{Role, UserTheatreRole},
     services::{bridge_role::BridgeRoleService, role::RoleService}, check_roles,
@@ -14,13 +16,6 @@ struct BridgeRoleQuery {
     theatre_id: uuid::Uuid,
 }
 
-#[derive(Deserialize)]
-struct BridgeRoleForm {
-    role_id: uuid::Uuid,
-    user_id: uuid::Uuid,
-    theatre_id: uuid::Uuid,
-}
-
 #[get("/available")]
 async fn get_all_roles(
     role_service: web::Data<RoleService>,
@@ -28,7 +23,7 @@ async fn get_all_roles(
     Ok(role_service
         .get_all_roles()
         .await?
-        .iter()
+        .par_iter()
         .map(|el| (el.name.clone(), el.id))
         .collect::<HashMap<String, uuid::Uuid>>()
         .into())
@@ -62,7 +57,7 @@ async fn query_bridge_roles(
 
 #[post("/new")]
 async fn register_bridge_role(
-    form: web::Json<BridgeRoleForm>,
+    new_role: web::Json<UserTheatreRole>,
     bridge_role_service: web::Data<BridgeRoleService>,
     role_service: web::Data<RoleService>,
     user_service: web::Data<UserService>,
@@ -74,28 +69,22 @@ async fn register_bridge_role(
         check_roles!(
             [Role::TheatreOwner, Role::UserManager],
             user.id,
-            form.theatre_id,
+            new_role.theatre_id,
             bridge_role_service,
             role_service
         );
     }
 
-    let new_role = UserTheatreRole {
-        user_id: form.user_id,
-        role_id: form.role_id,
-        theatre_id: form.theatre_id,
-    };
-
     if bridge_role_service.role_exists(new_role.clone()).await? {
         return Err(ErrorType::Conflict);
     }
 
-    Ok(bridge_role_service.register_role(new_role).await?.into())
+    Ok(bridge_role_service.register_roles(vec![new_role.into_inner()]).await?.first().cloned().into())
 }
 
-#[delete("/{id}")]
+#[delete("/delete")]
 async fn unregister_bridge_role(
-    form: web::Json<BridgeRoleForm>,
+    del: web::Json<UserTheatreRole>,
     bridge_role_service: web::Data<BridgeRoleService>,
     role_service: web::Data<RoleService>,
     user_service: web::Data<UserService>,
@@ -107,17 +96,11 @@ async fn unregister_bridge_role(
         check_roles!(
             [Role::TheatreOwner, Role::UserManager],
             user.id,
-            form.theatre_id,
+            del.theatre_id,
             bridge_role_service,
             role_service
         );
     }
-
-    let del = UserTheatreRole {
-        user_id: form.user_id,
-        role_id: form.role_id,
-        theatre_id: form.theatre_id,
-    };
 
     if !bridge_role_service.role_exists(del.clone()).await? {
         return Err(ErrorType::NotFound);

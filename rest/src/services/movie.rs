@@ -18,10 +18,7 @@ impl MovieService {
         Self { pool }
     }
 
-    pub async fn create(
-        &self,
-        movie: FormMovie,
-    ) -> Result<Option<Movie>, DatabaseError> {
+    pub async fn create(&self, movie: FormMovie) -> Result<Option<Movie>, DatabaseError> {
         use crate::schema::movies::dsl::*;
 
         let conn = &mut self.pool.get().await?;
@@ -33,16 +30,19 @@ impl MovieService {
             .cloned())
     }
 
-    pub async fn get_by_id(
-        &self,
-        id_: uuid::Uuid,
-    ) -> Result<Option<Movie>, DatabaseError> {
+    pub async fn get_by_id(&self, id_: uuid::Uuid) -> Result<Option<Movie>, DatabaseError> {
         use crate::schema::movies::dsl::*;
 
         let conn = &mut self.pool.get().await?;
 
         Ok(conn
-            .interact(move |conn| movies.filter(id.eq(id_)).limit(1).load::<Movie>(conn))
+            .interact(move |conn| {
+                movies
+                    .filter(is_deleted.eq(false))
+                    .filter(id.eq(id_))
+                    .limit(1)
+                    .load::<Movie>(conn)
+            })
             .await??
             .first()
             .cloned())
@@ -61,10 +61,14 @@ impl MovieService {
 
         Ok(conn
             .interact(move |conn| {
-                let mut query = movies.limit(limit).offset(offset).into_boxed();
+                let mut query = movies
+                    .filter(is_deleted.eq(false))
+                    .limit(limit)
+                    .offset(offset)
+                    .into_boxed();
 
                 if let Some(name_) = name_ {
-                    query = query.filter(name.eq(name_));
+                    query = query.filter(name.like(name_));
                 }
 
                 query = match sort_by {
@@ -85,6 +89,7 @@ impl MovieService {
             .await?
             .interact(move |conn| {
                 diesel::update(movies)
+                    .filter(is_deleted.eq(false))
                     .filter(id.eq(id_))
                     .set(is_deleted.eq(true))
                     .execute(conn)
@@ -109,10 +114,7 @@ impl MovieService {
             .cloned())
     }
 
-    pub async fn delete_review_by_id(
-        &self,
-        id_: uuid::Uuid,
-    ) -> Result<(), DatabaseError> {
+    pub async fn delete_review_by_id(&self, id_: uuid::Uuid) -> Result<(), DatabaseError> {
         use crate::schema::movie_reviews::dsl::*;
 
         let conn = self.pool.get().await?;

@@ -1,5 +1,6 @@
 use deadpool_diesel::postgres::{Manager, Pool};
 use diesel::prelude::*;
+use rayon::prelude::*;
 
 use crate::model::*;
 use crate::password;
@@ -154,22 +155,12 @@ impl TheatreResource {
         Ok(conn
             .interact(move |conn| Hall::belonging_to(&theatre).load::<Hall>(conn))
             .await??
-            .iter()
+            .par_iter()
             .map(|el| HallResource {
                 hall: el.clone(),
                 pool: self.pool.clone(),
             })
             .collect())
-    }
-
-    pub async fn get_permissions(&self) -> Result<Vec<TheatrePermission>, DatabaseError> {
-        let conn = self.pool.get().await?;
-
-        let theatre = self.theatre.clone();
-
-        Ok(conn
-            .interact(move |conn| TheatrePermission::belonging_to(&theatre).load(conn))
-            .await??)
     }
 
     pub async fn get_ticket_types(&self) -> Result<Vec<TicketType>, DatabaseError> {

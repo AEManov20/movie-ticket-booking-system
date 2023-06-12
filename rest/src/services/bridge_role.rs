@@ -1,5 +1,6 @@
 use deadpool_diesel::postgres::Pool;
 use diesel::prelude::*;
+use rayon::prelude::*;
 
 use crate::model::{Role, UserTheatreRole};
 
@@ -17,10 +18,10 @@ impl BridgeRoleService {
         Self { pool }
     }
 
-    pub async fn register_role(
+    pub async fn register_roles(
         &self,
-        role: UserTheatreRole,
-    ) -> Result<Option<UserTheatreRole>, DatabaseError> {
+        roles: Vec<UserTheatreRole>,
+    ) -> Result<Vec<UserTheatreRole>, DatabaseError> {
         use crate::schema::users_theatre_roles::dsl::*;
         Ok(self
             .pool
@@ -28,12 +29,10 @@ impl BridgeRoleService {
             .await?
             .interact(move |conn| {
                 diesel::insert_into(users_theatre_roles)
-                    .values(role)
+                    .values(roles)
                     .load(conn)
             })
-            .await??
-            .first()
-            .cloned())
+            .await??)
     }
 
     pub async fn unregister_roles(
@@ -61,6 +60,28 @@ impl BridgeRoleService {
 
         conn.interact(move |conn| query.execute(conn)).await??;
 
+        Ok(())
+    }
+
+    pub async fn unregister_roles_batch(
+        &self,
+        roles: Vec<UserTheatreRole>,
+    ) -> Result<(), DatabaseError> {
+        use crate::schema::users_theatre_roles::dsl::*;
+
+        let conn = self.pool.get().await?;
+        let query = roles.iter().fold(
+            diesel::delete(users_theatre_roles).into_boxed(),
+            |acc, el| {
+                acc.or_filter((
+                    role_id.eq(el.role_id),
+                    user_id.eq(el.user_id),
+                    theatre_id.eq(el.theatre_id),
+                ))
+            },
+        );
+
+        conn.interact(move |conn| query.execute(conn)).await??;
         Ok(())
     }
 

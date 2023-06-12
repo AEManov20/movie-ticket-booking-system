@@ -1,6 +1,7 @@
 use std::future::{ready, Ready};
 use std::pin::Pin;
 
+use rayon::prelude::*;
 use crate::util::JWT_ALGO;
 use deadpool_diesel::postgres::{Manager, Pool};
 use diesel::associations::HasTable;
@@ -10,10 +11,10 @@ use jsonwebtoken::Validation;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header};
 use serde::Serialize;
 
+use super::DatabaseError;
 use crate::model::*;
 use crate::password;
 use crate::vars::{jwt_email_secret, jwt_ticket_secret, jwt_user_secret};
-use super::DatabaseError;
 
 pub const EMAIL_CONFIRMATION_TOKEN_EXPIRY_DAYS: i64 = 1;
 pub const USER_TOKEN_EXPIRY_DAYS: i64 = 2;
@@ -29,10 +30,7 @@ impl UserService {
         Self { pool }
     }
 
-    pub async fn create(
-        &self,
-        user: FormUser,
-    ) -> Result<Option<UserResource>, DatabaseError> {
+    pub async fn create(&self, user: FormUser) -> Result<Option<UserResource>, DatabaseError> {
         use crate::schema::users::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -74,7 +72,13 @@ impl UserService {
         let conn = self.pool.get().await?;
 
         let result = conn
-            .interact(|conn| users.limit(1).filter(email.eq(email_)).load::<User>(conn))
+            .interact(|conn| {
+                users
+                    .limit(1)
+                    .filter(is_deleted.eq(false))
+                    .filter(email.eq(email_))
+                    .load::<User>(conn)
+            })
             .await??
             .first()
             .cloned();
@@ -96,7 +100,7 @@ impl UserService {
 
         let result = conn
             .interact(|conn| {
-                let mut query = users.limit(1).into_boxed();
+                let mut query = users.limit(1).filter(is_deleted.eq(false)).into_boxed();
 
                 if let Some(email_) = email_ {
                     query = query.or_filter(email.eq(email_));
@@ -118,16 +122,19 @@ impl UserService {
         }
     }
 
-    pub async fn get_by_id(
-        &self,
-        id_: uuid::Uuid,
-    ) -> Result<Option<UserResource>, DatabaseError> {
+    pub async fn get_by_id(&self, id_: uuid::Uuid) -> Result<Option<UserResource>, DatabaseError> {
         use crate::schema::users::dsl::*;
 
         let conn = self.pool.get().await?;
 
         let result = conn
-            .interact(move |conn| users.filter(id.eq(id_)).limit(1).load::<User>(conn))
+            .interact(move |conn| {
+                users
+                    .filter(is_deleted.eq(false))
+                    .filter(id.eq(id_))
+                    .limit(1)
+                    .load::<User>(conn)
+            })
             .await??
             .first()
             .cloned();
@@ -146,6 +153,7 @@ impl UserService {
             .await?
             .interact(move |conn| {
                 diesel::update(users)
+                    .filter(is_deleted.eq(false))
                     .filter(id.eq(id_))
                     .set(is_deleted.eq(true))
                     .execute(conn)
@@ -185,9 +193,7 @@ impl UserResource {
             &EncodingKey::from_secret(jwt_user_secret().as_bytes()),
         )?;
 
-        Ok(LoginResponse {
-            token,
-        })
+        Ok(LoginResponse { token })
     }
 
     pub fn verify_user_jwt(user_jwt: &str) -> Option<JwtClaims> {
@@ -224,7 +230,8 @@ impl UserResource {
             email_jwt,
             &DecodingKey::from_secret(jwt_email_secret().as_bytes()),
             &Validation::new(*JWT_ALGO),
-        )?.claims)
+        )?
+        .claims)
     }
 
     pub async fn activate(&self) -> Result<(), DatabaseError> {
@@ -244,124 +251,7 @@ impl UserResource {
         Ok(())
     }
 
-    pub async fn get_theatre_permissions(
-        &self,
-    ) -> Result<Vec<TheatrePermission>, DatabaseError> {
-        let conn = self.pool.get().await?;
-        let user = self.user.clone();
-
-        Ok(conn
-            .interact(move |conn| TheatrePermission::belonging_to(&user).load(conn))
-            .await??)
-    }
-
-    pub async fn get_theatre_permission(
-        &self,
-        theatre_id_: uuid::Uuid,
-    ) -> Result<Option<TheatrePermission>, DatabaseError> {
-        use crate::schema::theatre_permissions::dsl::*;
-
-        let conn = self.pool.get().await?;
-        let user = self.user.clone();
-
-        Ok(conn
-            .interact(move |conn| {
-                TheatrePermission::belonging_to(&user)
-                    .filter(theatre_id.eq(theatre_id_))
-                    .load(conn)
-            })
-            .await??
-            .first()
-            .cloned())
-    }
-
-    pub async fn create_theatre_permission(
-        &self,
-        theatre_id: uuid::Uuid,
-        can_check_tickets: bool,
-        can_manage_movies: bool,
-        can_manage_tickets: bool,
-        can_manage_users: bool,
-        is_theatre_owner: bool,
-    ) -> Result<Option<TheatrePermission>, DatabaseError> {
-        let conn = self.pool.get().await?;
-
-        let permission = FormTheatrePermission {
-            user_id: self.user.id,
-            can_check_tickets,
-            can_manage_movies,
-            can_manage_tickets,
-            can_manage_users,
-            is_theatre_owner,
-            theatre_id,
-        };
-
-        Ok(conn
-            .interact(move |conn| {
-                diesel::insert_into(TheatrePermission::table())
-                    .values(permission)
-                    .load::<TheatrePermission>(conn)
-            })
-            .await??
-            .first()
-            .cloned())
-    }
-
-    pub async fn update_theatre_permission(
-        &self,
-        theatre_id_: uuid::Uuid,
-        can_check_tickets: bool,
-        can_manage_movies: bool,
-        can_manage_tickets: bool,
-        can_manage_users: bool,
-        is_theatre_owner: bool,
-    ) -> Result<Option<TheatrePermission>, DatabaseError> {
-        let conn = self.pool.get().await?;
-
-        let update = UpdateTheatrePermission {
-            can_check_tickets,
-            can_manage_movies,
-            can_manage_tickets,
-            can_manage_users,
-            is_theatre_owner,
-        };
-
-        let user = self.user.clone();
-
-        Ok(conn
-            .interact(move |conn| {
-                diesel::update(TheatrePermission::table())
-                    .filter(crate::schema::theatre_permissions::dsl::user_id.eq(user.id))
-                    .filter(crate::schema::theatre_permissions::dsl::theatre_id.eq(theatre_id_))
-                    .set(update)
-                    .load(conn)
-            })
-            .await??
-            .first()
-            .cloned())
-    }
-
-    pub async fn delete_theatre_permission(
-        &self,
-        theatre_id_: uuid::Uuid,
-    ) -> Result<(), DatabaseError> {
-        use crate::schema::theatre_permissions::dsl::*;
-
-        let conn = self.pool.get().await?;
-
-        conn.interact(move |conn| {
-            diesel::delete(theatre_permissions)
-                .filter(theatre_id.eq(theatre_id_))
-                .execute(conn)
-        })
-        .await??;
-        Ok(())
-    }
-
-    pub async fn update_user(
-        &mut self,
-        new_user: FormUser,
-    ) -> Result<(), DatabaseError> {
+    pub async fn update_user(&mut self, new_user: FormUser) -> Result<(), DatabaseError> {
         use crate::schema::users::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -446,7 +336,7 @@ impl UserResource {
         Ok(conn
             .interact(move |conn| Ticket::belonging_to(&cloned_user).load(conn))
             .await??
-            .iter()
+            .par_iter()
             .map(|e: &Ticket| TicketResource::new(e.clone(), self.pool.clone()))
             .collect::<Vec<_>>())
     }

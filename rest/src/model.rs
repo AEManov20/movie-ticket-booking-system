@@ -39,6 +39,7 @@ pub struct SlimUser {
     pub username: String,
     pub created_at: chrono::NaiveDateTime,
     pub is_activated: bool,
+    #[serde(skip)]
     pub is_deleted: bool,
 }
 
@@ -149,6 +150,7 @@ pub struct Theatre {
     pub name: String,
     pub location_lat: f64,
     pub location_lon: f64,
+    #[serde(skip)]
     pub is_deleted: bool,
 }
 
@@ -168,8 +170,8 @@ pub struct Movie {
     pub genre: String,
     pub release_date: chrono::NaiveDate,
     pub length: f64,
-    pub votes: i32,
     pub imdb_link: Option<String>,
+    #[serde(skip)]
     pub is_deleted: bool,
 }
 
@@ -216,42 +218,6 @@ pub struct FormMovieReview {
 
 #[derive(Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations)]
 #[diesel(belongs_to(Theatre))]
-#[diesel(belongs_to(User))]
-#[diesel(primary_key(user_id, theatre_id))]
-pub struct TheatrePermission {
-    pub user_id: uuid::Uuid,
-    pub theatre_id: uuid::Uuid,
-    pub can_manage_users: bool,
-    pub can_manage_movies: bool,
-    pub can_check_tickets: bool,
-    pub can_manage_tickets: bool,
-    pub is_theatre_owner: bool,
-}
-
-#[derive(Insertable, Deserialize, AsChangeset)]
-#[diesel(table_name = theatre_permissions)]
-pub struct FormTheatrePermission {
-    pub user_id: uuid::Uuid,
-    pub theatre_id: uuid::Uuid,
-    pub can_manage_users: bool,
-    pub can_manage_movies: bool,
-    pub can_check_tickets: bool,
-    pub can_manage_tickets: bool,
-    pub is_theatre_owner: bool,
-}
-
-#[derive(Insertable, Deserialize, AsChangeset)]
-#[diesel(table_name = theatre_permissions)]
-pub struct UpdateTheatrePermission {
-    pub can_manage_users: bool,
-    pub can_manage_movies: bool,
-    pub can_check_tickets: bool,
-    pub can_manage_tickets: bool,
-    pub is_theatre_owner: bool,
-}
-
-#[derive(Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations)]
-#[diesel(belongs_to(Theatre))]
 pub struct TicketType {
     pub id: uuid::Uuid,
     pub type_: String,
@@ -263,7 +229,7 @@ pub struct TicketType {
     pub price: f64,
 }
 
-#[derive(Identifiable, Insertable, Queryable, Serialize, Debug, Clone, Associations)]
+#[derive(Identifiable, Insertable, Queryable, Serialize, Deserialize, Debug, Clone, Associations)]
 #[diesel(belongs_to(User))]
 #[diesel(belongs_to(Theatre))]
 #[diesel(belongs_to(TheatreRole, foreign_key = role_id))]

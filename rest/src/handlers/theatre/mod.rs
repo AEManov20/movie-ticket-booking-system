@@ -1,14 +1,14 @@
-use crate::model::FormTheatre;
+use crate::{model::FormTheatre, services::theatre::TheatreService};
 
 use super::*;
 
 mod movie;
-mod permission;
+mod role;
 mod ticket_type;
 mod ticket;
 
 #[post("/new")]
-async fn new_theatre(theatre: web::Json<FormTheatre>) -> HttpResponse {
+async fn new_theatre(theatre: web::Json<FormTheatre>, theatre_service: web::Data<TheatreService>) -> HttpResponse {
     todo!();
 }
 
@@ -32,7 +32,7 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         web::scope("/theatre")
             .service(web::scope("/{id}")
                 .configure(movie::config)
-                .configure(permission::config)
+                .configure(role::config)
                 .configure(ticket_type::config)
                 .configure(ticket::config))
             .service(new_theatre)

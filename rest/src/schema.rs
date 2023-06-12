@@ -46,21 +46,8 @@ diesel::table! {
         genre -> Varchar,
         release_date -> Date,
         length -> Float8,
-        votes -> Int4,
         imdb_link -> Nullable<Varchar>,
         is_deleted -> Bool,
-    }
-}
-
-diesel::table! {
-    theatre_permissions (user_id, theatre_id) {
-        user_id -> Uuid,
-        theatre_id -> Uuid,
-        can_manage_users -> Bool,
-        can_manage_movies -> Bool,
-        can_check_tickets -> Bool,
-        can_manage_tickets -> Bool,
-        is_theatre_owner -> Bool,
     }
 }
 
@@ -149,8 +136,6 @@ diesel::joinable!(external_credentials -> users (user_id));
 diesel::joinable!(halls -> theatres (theatre_id));
 diesel::joinable!(movie_reviews -> movies (movie_id));
 diesel::joinable!(movie_reviews -> users (author_user_id));
-diesel::joinable!(theatre_permissions -> theatres (theatre_id));
-diesel::joinable!(theatre_permissions -> users (user_id));
 diesel::joinable!(theatre_screenings -> halls (hall_id));
 diesel::joinable!(theatre_screenings -> movies (movie_id));
 diesel::joinable!(theatre_screenings -> theatres (theatre_id));
@@ -168,7 +153,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     languages,
     movie_reviews,
     movies,
-    theatre_permissions,
     theatre_roles,
     theatre_screenings,
     theatres,
