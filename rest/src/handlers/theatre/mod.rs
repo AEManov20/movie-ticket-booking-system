@@ -70,8 +70,20 @@ async fn update_theatre(
 }
 
 #[delete("/{id}")]
-async fn delete_theatre(path: web::Path<(uuid::Uuid,)>) -> HttpResponse {
-    todo!();
+async fn delete_theatre(
+    path: web::Path<(uuid::Uuid,)>,
+    theatre_service: web::Data<TheatreService>,
+    user_service: web::Data<UserService>,
+    claims: JwtClaims,
+) -> Result<()> {
+    let theatre_id = path.0;
+    let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
+
+    if !user.is_super_user {
+        return Err(ErrorType::InsufficientPermission);
+    }
+
+    Ok(theatre_service.delete(theatre_id).await?.into())
 }
 
 pub fn config(cfg: &mut web::ServiceConfig) {
