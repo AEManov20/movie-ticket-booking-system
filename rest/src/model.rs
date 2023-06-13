@@ -11,7 +11,7 @@ use crate::schema::*;
 use crate::util::JWT_ALGO;
 use crate::vars::jwt_user_secret;
 
-#[derive(Selectable, Identifiable, Queryable, Debug, Clone, AsChangeset)]
+#[derive(Selectable, Identifiable, Queryable, Debug, Serialize, Deserialize, Clone, AsChangeset)]
 pub struct User {
     pub id: uuid::Uuid,
     pub first_name: String,
@@ -20,20 +20,8 @@ pub struct User {
     pub username: String,
     pub password_hash: Option<String>,
     pub created_at: chrono::NaiveDateTime,
+    #[serde(skip)]
     pub is_super_user: bool,
-    pub is_activated: bool,
-    pub is_deleted: bool,
-}
-
-#[derive(Identifiable, Queryable, Serialize, Debug, Clone)]
-#[diesel(table_name = users)]
-pub struct SlimUser {
-    pub id: uuid::Uuid,
-    pub first_name: String,
-    pub last_name: String,
-    pub email: String,
-    pub username: String,
-    pub created_at: chrono::NaiveDateTime,
     pub is_activated: bool,
     #[serde(skip)]
     pub is_deleted: bool,
@@ -326,27 +314,12 @@ impl std::fmt::Display for Role {
     }
 }
 
-impl From<User> for SlimUser {
-    fn from(value: User) -> Self {
-        Self {
-            id: value.id,
-            first_name: value.first_name,
-            last_name: value.last_name,
-            email: value.email,
-            username: value.username,
-            created_at: value.created_at,
-            is_activated: value.is_activated,
-            is_deleted: value.is_deleted,
-        }
-    }
-}
-
 impl FromRequest for JwtClaims {
     type Error = crate::handlers::ErrorType;
     type Future = Ready<Result<Self, Self::Error>>;
 
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
-        use crate::handlers::{ErrorType};
+        use crate::handlers::ErrorType;
 
         let Some(token) = req.headers().get(http::header::AUTHORIZATION) else {
             return ready(Err(ErrorType::NoAuth))
