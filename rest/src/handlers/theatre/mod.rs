@@ -1,7 +1,7 @@
 use crate::{
     check_roles,
     model::{FormTheatre, Role, Theatre},
-    services::{bridge_role::BridgeRoleService, role::RoleService, theatre::TheatreService},
+    services::{bridge_role::*, role::*, theatre::*},
 };
 
 use super::*;

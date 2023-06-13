@@ -441,6 +441,7 @@ impl UserResource {
     }
 }
 
+#[derive(Clone)]
 pub struct TicketResource {
     ticket: Ticket,
     pool: Pool,

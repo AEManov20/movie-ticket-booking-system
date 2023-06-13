@@ -138,6 +138,7 @@ impl TheatreService {
     }
 }
 
+#[derive(Clone)]
 pub struct TheatreResource {
     theatre: Theatre,
     pool: Pool,
@@ -406,6 +407,7 @@ impl TheatreResource {
     }
 }
 
+#[derive(Clone)]
 pub struct HallResource {
     hall: Hall,
     pool: Pool,
