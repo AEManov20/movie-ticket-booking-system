@@ -14,7 +14,6 @@ diesel::table! {
         id -> Uuid,
         theatre_id -> Uuid,
         name -> Varchar,
-        price_increase -> Float8,
         seat_data -> Json,
     }
 }
