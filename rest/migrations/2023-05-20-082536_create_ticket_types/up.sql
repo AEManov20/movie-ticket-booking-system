@@ -8,7 +8,8 @@ CREATE TABLE IF NOT EXISTS ticket_types (
 
     -- NOTE: this is compliant to the ISO 4217 standard, which specifies three-letter ("Alpha-3") codes for currencies worldwide
     currency VARCHAR(3) NOT NULL,
-    price FLOAT NOT NULL
+    price FLOAT NOT NULL,
+    is_deleted BOOL NOT NULL DEFAULT FALSE
 );
 
 ALTER TABLE IF EXISTS tickets ADD CONSTRAINT tickets_ticket_types_fkey FOREIGN KEY(ticket_type_id) REFERENCES ticket_types("id");

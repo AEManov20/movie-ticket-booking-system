@@ -15,6 +15,7 @@ diesel::table! {
         theatre_id -> Uuid,
         name -> Varchar,
         seat_data -> Json,
+        is_deleted -> Bool,
     }
 }
 
@@ -69,6 +70,7 @@ diesel::table! {
         starting_time -> Timestamp,
         is_3d -> Bool,
         status -> Int4,
+        is_deleted -> Bool,
     }
 }
 
@@ -91,6 +93,7 @@ diesel::table! {
         theatre_id -> Uuid,
         currency -> Varchar,
         price -> Float8,
+        is_deleted -> Bool,
     }
 }
 

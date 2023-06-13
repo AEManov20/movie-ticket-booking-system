@@ -10,6 +10,7 @@ mod role;
 mod screening;
 mod ticket;
 mod ticket_type;
+mod hall;
 
 #[post("/new")]
 async fn new_theatre(
@@ -94,7 +95,8 @@ pub fn config(cfg: &mut web::ServiceConfig) {
                     .configure(screening::config)
                     .configure(role::config)
                     .configure(ticket_type::config)
-                    .configure(ticket::config),
+                    .configure(ticket::config)
+                    .configure(hall::config),
             )
             .service(new_theatre)
             .service(get_theatre)

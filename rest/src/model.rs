@@ -99,6 +99,7 @@ pub struct TheatreScreening {
     pub starting_time: chrono::NaiveDateTime,
     pub is_3d: bool,
     pub status: i32,
+    pub is_deleted: bool,
 }
 
 #[derive(Insertable, Deserialize, AsChangeset, Validate)]
@@ -122,13 +123,14 @@ pub struct TheatreScreeningEvent {
     pub movie_name: String,
 }
 
-#[derive(Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations)]
+#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations)]
 #[diesel(belongs_to(Theatre))]
 pub struct Hall {
     pub id: uuid::Uuid,
     pub theatre_id: uuid::Uuid,
     pub name: String,
     pub seat_data: serde_json::Value,
+    pub is_deleted: bool
 }
 
 #[derive(Insertable, Deserialize, AsChangeset, Validate)]
@@ -228,6 +230,7 @@ pub struct TicketType {
     pub theatre_id: uuid::Uuid,
     pub currency: String,
     pub price: f64,
+    pub is_deleted: bool
 }
 
 #[derive(Selectable, Identifiable, Insertable, Queryable, Serialize, Deserialize, Debug, Clone, Associations)]

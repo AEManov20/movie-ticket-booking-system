@@ -13,5 +13,6 @@ CREATE TABLE IF NOT EXISTS theatre_screenings (
     -- 1 - adverts are running
     -- 2 - movie is running
     -- 3 - movie is finished
-    "status" INTEGER NOT NULL DEFAULT 0
+    "status" INTEGER NOT NULL DEFAULT 0,
+    is_deleted BOOL NOT NULL DEFAULT FALSE
 );
