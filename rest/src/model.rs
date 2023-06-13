@@ -41,13 +41,13 @@ pub struct SlimUser {
 
 #[derive(Deserialize, Debug, Clone, Validate)]
 pub struct FormUser {
-    #[validate(length(min = 1))]
+    #[validate(length(min = 1, max = 50))]
     pub first_name: String,
-    #[validate(length(min = 1))]
+    #[validate(length(min = 1, max = 50))]
     pub last_name: String,
-    #[validate(email)]
+    #[validate(email, length(max = 150))]
     pub email: String,
-    #[validate(length(min = 8))]
+    #[validate(length(min = 8, max = 50))]
     pub username: String,
     #[validate(length(min = 12))]
     pub password: String,
@@ -140,16 +140,15 @@ pub struct Hall {
     pub id: uuid::Uuid,
     pub theatre_id: uuid::Uuid,
     pub name: String,
-    pub price_increase: f64,
     pub seat_data: serde_json::Value,
 }
 
-#[derive(Insertable, Deserialize, AsChangeset)]
+#[derive(Insertable, Deserialize, AsChangeset, Validate)]
 #[diesel(table_name = halls)]
 pub struct FormHall {
+    #[validate(length(max = 50))]
     pub name: String,
     pub theatre_id: uuid::Uuid,
-    pub price_increase: Option<f64>,
     pub seat_data: serde_json::Value,
 }
 
@@ -163,11 +162,14 @@ pub struct Theatre {
     pub is_deleted: bool,
 }
 
-#[derive(Insertable, Deserialize, AsChangeset)]
+#[derive(Insertable, Deserialize, AsChangeset, Validate)]
 #[diesel(table_name = theatres)]
 pub struct FormTheatre {
+    #[validate(length(max = 50))]
     pub name: String,
+    #[validate(range(min = -90., max = 90.))]
     pub location_lat: f64,
+    #[validate(range(min = -180., max = 180.))]
     pub location_lon: f64,
 }
 
@@ -189,11 +191,13 @@ pub struct Movie {
 pub struct FormMovie {
     #[validate(length(min = 1))]
     pub name: String,
+    #[validate(length(max = 65535))]
     pub description: String,
+    #[validate(length(max = 250))]
     pub genre: String,
     pub release_date: chrono::NaiveDate,
     pub length: f64,
-    #[validate(url)]
+    #[validate(url, length(max = 250))]
     pub imdb_link: Option<String>,
 }
 
