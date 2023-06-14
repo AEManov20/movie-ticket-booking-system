@@ -2,11 +2,13 @@ use crate::{model::Language, services::language::LanguageService};
 
 use super::*;
 
+#[utoipa::path(context_path = "/api/v1/language")]
 #[get("/all")]
 pub async fn get_all_languages(language_service: web::Data<LanguageService>) -> Result<Vec<Language>> {
     Ok(language_service.get_all_languages().await?.into())
 }
 
+#[utoipa::path(context_path = "/api/v1/language")]
 #[get("/{id}")]
 pub async fn get_language(
     path: web::Path<uuid::Uuid>,

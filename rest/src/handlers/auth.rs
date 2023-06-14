@@ -10,8 +10,8 @@ use crate::{
 // TODO: implement auth from other providers
 
 #[derive(Deserialize)]
-struct EmailVerificationQuery {
-    email_key: String,
+pub struct EmailVerificationQuery {
+    pub email_key: String,
 }
 
 #[utoipa::path(context_path = "/api/v1/auth")]
@@ -43,6 +43,7 @@ pub async fn login_user(
     }
 }
 
+#[utoipa::path(context_path = "/api/v1/auth")]
 #[post("/register")]
 pub async fn register_user(
     user: web::Json<FormUser>,
@@ -63,6 +64,7 @@ pub async fn register_user(
     Ok(user.create_email_jwt()?.into())
 }
 
+#[utoipa::path(context_path = "/api/v1/auth")]
 #[get("/verify")]
 pub async fn verify_email(
     query: web::Query<EmailVerificationQuery>,

@@ -6,12 +6,13 @@ use crate::{
 
 use super::*;
 
-mod role;
-mod screening;
-mod ticket;
-mod ticket_type;
-mod hall;
+pub mod role;
+pub mod screening;
+pub mod ticket;
+pub mod ticket_type;
+pub mod hall;
 
+#[utoipa::path(context_path = "/api/v1/theatre")]
 #[post("/new")]
 pub async fn new_theatre(
     theatre: web::Json<FormTheatre>,
@@ -28,6 +29,7 @@ pub async fn new_theatre(
     Ok(Theatre::from(theatre_service.create(theatre.into_inner()).await?).into())
 }
 
+#[utoipa::path(context_path = "/api/v1/theatre")]
 #[get("/{id}")]
 pub async fn get_theatre(
     path: web::Path<(uuid::Uuid,)>,
@@ -39,6 +41,7 @@ pub async fn get_theatre(
     }
 }
 
+#[utoipa::path(context_path = "/api/v1/theatre")]
 #[put("/{id}")]
 pub async fn update_theatre(
     path: web::Path<(uuid::Uuid,)>,
@@ -70,6 +73,7 @@ pub async fn update_theatre(
     .into())
 }
 
+#[utoipa::path(context_path = "/api/v1/theatre")]
 #[delete("/{id}")]
 pub async fn delete_theatre(
     path: web::Path<(uuid::Uuid,)>,

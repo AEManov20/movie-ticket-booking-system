@@ -11,19 +11,20 @@ use crate::{
 use super::*;
 
 #[derive(Deserialize)]
-enum Action {
+pub enum Action {
     Create,
     Delete,
 }
 
 #[derive(Deserialize)]
-struct UserRoleForm {
-    action: Action,
-    user_id: uuid::Uuid,
-    role_id: uuid::Uuid,
+pub struct UserRoleForm {
+    pub action: Action,
+    pub user_id: uuid::Uuid,
+    pub role_id: uuid::Uuid,
 }
 
 /// returns a hashmap with (user_id, role_id)
+#[utoipa::path(context_path = "/api/v1/theatre/{id}/role")]
 #[get("/all")]
 pub async fn get_all_roles(
     path: web::Path<(uuid::Uuid,)>,
@@ -54,6 +55,7 @@ pub async fn get_all_roles(
         .into())
 }
 
+#[utoipa::path(context_path = "/api/v1/theatre/{id}/role")]
 #[put("/update")]
 pub async fn update_roles_batch(
     path: web::Path<(uuid::Uuid,)>,

@@ -14,12 +14,12 @@ use crate::{
     },
 };
 
-mod auth;
-mod movie;
-mod role;
-mod theatre;
-mod user;
-mod language;
+pub mod auth;
+pub mod movie;
+pub mod role;
+pub mod theatre;
+pub mod user;
+pub mod language;
 
 #[derive(Serialize, Debug)]
 #[serde(tag = "type", content = "data")]

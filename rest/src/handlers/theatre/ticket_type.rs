@@ -2,6 +2,7 @@ use crate::model::{TicketType, FormTicketType};
 
 use super::*;
 
+#[utoipa::path(context_path = "/api/v1/theatre/{id}/ticket_type")]
 #[get("/all")]
 pub async fn get_all_ticket_types(
     path: web::Path<uuid::Uuid>,
@@ -14,6 +15,7 @@ pub async fn get_all_ticket_types(
     Ok(theatre_res.get_ticket_types().await?.into())
 }
 
+#[utoipa::path(context_path = "/api/v1/theatre/{id}/ticket_type")]
 #[post("/new")]
 pub async fn create_ticket_type(
     path: web::Path<uuid::Uuid>,
@@ -43,6 +45,7 @@ pub async fn create_ticket_type(
     Ok(theatre_res.create_ticket_type(new_ticket_type.into_inner()).await?.into())
 }
 
+#[utoipa::path(context_path = "/api/v1/theatre/{id}/ticket_type")]
 #[delete("/{ttid}")]
 pub async fn delete_ticket_type(
     path: web::Path<(uuid::Uuid, uuid::Uuid)>,

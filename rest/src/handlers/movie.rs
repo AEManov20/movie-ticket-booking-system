@@ -10,31 +10,31 @@ use crate::{
 };
 
 #[derive(Deserialize)]
-struct NewReviewPayload {
-    movie_id: uuid::Uuid,
-    content: Option<String>,
-    rating: f64,
+pub struct NewReviewPayload {
+    pub movie_id: uuid::Uuid,
+    pub content: Option<String>,
+    pub rating: f64,
 }
 
 #[derive(Deserialize, Validate)]
-struct MovieQuery {
+pub struct MovieQuery {
     #[validate(length(min = 1, max = 250))]
-    name: Option<String>,
-    sort_by: SortBy,
+    pub name: Option<String>,
+    pub sort_by: SortBy,
     #[validate(range(min = 1, max = 100))]
-    limit: i64,
-    offset: i64,
+    pub limit: i64,
+    pub offset: i64,
 }
 
 #[derive(Deserialize, Validate)]
-struct MovieReviewQuery {
-    movie_id: uuid::Uuid,
+pub struct MovieReviewQuery {
     #[validate(range(min = 1, max = 100))]
-    limit: i64,
-    offset: i64,
-    sort_by: SortBy
+    pub limit: i64,
+    pub offset: i64,
+    pub sort_by: SortBy
 }
 
+#[utoipa::path(context_path = "/api/v1/movie")]
 #[post("/review/new")]
 pub async fn submit_new_review(
     new_review: web::Json<NewReviewPayload>,
@@ -46,6 +46,7 @@ pub async fn submit_new_review(
     Ok(user_res.create_review(new_review.content.clone(), new_review.rating, new_review.movie_id).await?.into())
 }
 
+#[utoipa::path(context_path = "/api/v1/movie")]
 #[get("/review/{id}")]
 pub async fn get_review_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::Data<MovieService>) -> Result<MovieReview> {
     match movie_service.get_review_by_id(path.0).await? {
@@ -54,6 +55,7 @@ pub async fn get_review_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: web
     }
 }
 
+#[utoipa::path(context_path = "/api/v1/movie")]
 #[delete("/review/{id}")]
 pub async fn delete_review_by_id(path: web::Path<(uuid::Uuid,)>, user_service: web::Data<UserService>, movie_service: web::Data<MovieService>, claims: JwtClaims) -> Result<()> {
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
@@ -70,18 +72,21 @@ pub async fn delete_review_by_id(path: web::Path<(uuid::Uuid,)>, user_service: w
     }
 }
 
+#[utoipa::path(context_path = "/api/v1/movie")]
 #[get("/{id}/reviews")]
 pub async fn get_reviews(path: web::Path<(uuid::Uuid,)>, query: web::Query<MovieReviewQuery>, movie_service: web::Data<MovieService>) -> Result<Vec<MovieReview>> {
     query.validate()?;
 
-    Ok(movie_service.query_reviews(query.movie_id, query.limit, query.offset, query.sort_by).await?.into())
+    Ok(movie_service.query_reviews(path.0, query.limit, query.offset, query.sort_by).await?.into())
 }
 
+#[utoipa::path(context_path = "/api/v1/movie")]
 #[get("/{id}/theatres")]
 pub async fn get_theatres_by_movie_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::Data<MovieService>) -> Result<Vec<Theatre>> {
     todo!();
 }
 
+#[utoipa::path(context_path = "/api/v1/movie")]
 #[get("/query")]
 pub async fn query_movies(
     query: web::Query<MovieQuery>,
@@ -92,6 +97,7 @@ pub async fn query_movies(
     Ok(movie_service.query_movies(query.name.clone(), query.limit, query.offset, query.sort_by).await?.into())
 }
 
+#[utoipa::path(context_path = "/api/v1/movie")]
 #[get("/{id}")]
 pub async fn get_movie_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::Data<MovieService>) -> Result<Movie> {
     match movie_service.get_by_id(path.0).await? {
@@ -103,6 +109,7 @@ pub async fn get_movie_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: web:
     }
 }
 
+#[utoipa::path(context_path = "/api/v1/movie")]
 #[delete("/{id}")]
 pub async fn delete_movie_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::Data<MovieService>, user_service: web::Data<UserService>, claims: JwtClaims) -> Result<()> {
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
@@ -114,8 +121,9 @@ pub async fn delete_movie_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: w
     }
 }
 
+#[utoipa::path(context_path = "/api/v1/movie")]
 #[post("/new")]
-pub async fn insert_movie(movie: web::Json<FormMovie>, movie_service: web::Data<MovieService>, user_service: web::Data<UserService>, claims: JwtClaims) -> Result<Movie> {
+pub async fn create_movie(movie: web::Json<FormMovie>, movie_service: web::Data<MovieService>, user_service: web::Data<UserService>, claims: JwtClaims) -> Result<Movie> {
     movie.validate()?;
 
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
@@ -136,6 +144,6 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(query_movies)
             .service(get_movie_by_id)
             .service(delete_movie_by_id)
-            .service(insert_movie),
+            .service(create_movie),
     );
 }

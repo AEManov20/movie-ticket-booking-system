@@ -8,9 +8,14 @@ mod vars;
 
 mod doc;
 
-use actix_web::{web, App, HttpResponse, HttpServer, error::ErrorImATeapot};
-use services::{movie::MovieService, theatre::TheatreService, user::UserService, bridge_role::BridgeRoleService, role::RoleService, language::LanguageService};
+use actix_web::{error::ErrorImATeapot, web, App, HttpResponse, HttpServer};
+use services::{
+    bridge_role::BridgeRoleService, language::LanguageService, movie::MovieService,
+    role::RoleService, theatre::TheatreService, user::UserService,
+};
 use util::get_connection_pool;
+use utoipa::OpenApi;
+use utoipa_swagger_ui::SwaggerUi;
 
 async fn root_response() -> HttpResponse {
     ErrorImATeapot("*wind noises*").into()
@@ -30,6 +35,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let role_service = RoleService::new(pool.clone());
     let language_service = LanguageService::new(pool.clone());
 
+    let openapi = doc::ApiDoc::openapi();
+
     HttpServer::new(move || {
         App::new()
             .wrap(actix_web::middleware::Logger::default())
@@ -40,9 +47,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .app_data(web::Data::new(role_service.clone()))
             .app_data(web::Data::new(language_service.clone()))
             .route("/", web::get().to(root_response))
+            .service(web::scope("/api/v1").configure(handlers::config))
             .service(
-                web::scope("/api/v1")
-                    .configure(handlers::config)
+                SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
             )
     })
     .bind(("127.0.0.1", 8080))?

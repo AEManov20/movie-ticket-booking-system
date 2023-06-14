@@ -8,9 +8,9 @@ use crate::model::{FormTheatreScreening, TheatreScreening, TheatreScreeningEvent
 use super::*;
 
 #[derive(Deserialize)]
-struct TimelineQuery {
-    start_date: chrono::DateTime<Utc>,
-    end_date: Option<chrono::DateTime<Utc>>,
+pub struct TimelineQuery {
+    pub start_date: chrono::DateTime<Utc>,
+    pub end_date: Option<chrono::DateTime<Utc>>,
 }
 
 // TODO: implement verbose validation error messages
@@ -30,6 +30,7 @@ fn validate_timeline_query(query: &TimelineQuery) -> std::result::Result<(), Val
     Ok(())
 }
 
+#[utoipa::path(context_path = "/api/v1/theatre/{id}/screening")]
 #[get("/timeline")]
 pub async fn get_timeline(
     path: web::Path<(uuid::Uuid,)>,
@@ -52,6 +53,7 @@ pub async fn get_timeline(
         .into())
 }
 
+#[utoipa::path(context_path = "/api/v1/theatre/{id}/screening")]
 #[get("/{tsid}")]
 pub async fn get_theatre_screening(
     path: web::Path<(uuid::Uuid, uuid::Uuid)>,
@@ -71,6 +73,7 @@ pub async fn get_theatre_screening(
     }
 }
 
+#[utoipa::path(context_path = "/api/v1/theatre/{id}/screening")]
 #[put("/{tsid}")]
 pub async fn update_theatre_screening(
     path: web::Path<(uuid::Uuid, uuid::Uuid)>,
@@ -103,6 +106,7 @@ pub async fn update_theatre_screening(
         .into())
 }
 
+#[utoipa::path(context_path = "/api/v1/theatre/{id}/screening")]
 #[delete("/{tsid}")]
 pub async fn delete_theatre_screening(
     path: web::Path<(uuid::Uuid, uuid::Uuid)>,
@@ -134,6 +138,7 @@ pub async fn delete_theatre_screening(
         .into())
 }
 
+#[utoipa::path(context_path = "/api/v1/theatre/{id}/screening")]
 #[post("/new")]
 pub async fn create_theatre_screening(
     path: web::Path<uuid::Uuid>,
