@@ -7,13 +7,16 @@ use crate::{
     services::user::{LoginResponse, UserResource, UserService},
 };
 
+// TODO: implement auth from other providers
+
 #[derive(Deserialize)]
 struct EmailVerificationQuery {
     email_key: String,
 }
 
+#[utoipa::path(context_path = "/api/v1/auth")]
 #[get("/login")]
-async fn login_user(
+pub async fn login_user(
     params: web::Query<LoginUser>,
     user_service: web::Data<UserService>,
 ) -> Result<LoginResponse> {
@@ -41,7 +44,7 @@ async fn login_user(
 }
 
 #[post("/register")]
-async fn register_user(
+pub async fn register_user(
     user: web::Json<FormUser>,
     user_service: web::Data<UserService>,
 ) -> Result<String> {
@@ -61,7 +64,7 @@ async fn register_user(
 }
 
 #[get("/verify")]
-async fn verify_email(
+pub async fn verify_email(
     query: web::Query<EmailVerificationQuery>,
     user_service: web::Data<UserService>,
 ) -> Result<()> {

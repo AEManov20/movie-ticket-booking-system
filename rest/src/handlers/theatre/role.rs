@@ -25,7 +25,7 @@ struct UserRoleForm {
 
 /// returns a hashmap with (user_id, role_id)
 #[get("/all")]
-async fn get_all_roles(
+pub async fn get_all_roles(
     path: web::Path<(uuid::Uuid,)>,
     bridge_role_service: web::Data<BridgeRoleService>,
     role_service: web::Data<RoleService>,
@@ -55,7 +55,7 @@ async fn get_all_roles(
 }
 
 #[put("/update")]
-async fn update_roles_batch(
+pub async fn update_roles_batch(
     path: web::Path<(uuid::Uuid,)>,
     batch: web::Json<Vec<UserRoleForm>>,
     bridge_role_service: web::Data<BridgeRoleService>,

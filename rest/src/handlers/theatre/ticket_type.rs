@@ -3,7 +3,7 @@ use crate::model::{TicketType, FormTicketType};
 use super::*;
 
 #[get("/all")]
-async fn get_all_ticket_types(
+pub async fn get_all_ticket_types(
     path: web::Path<uuid::Uuid>,
     theatre_service: web::Data<TheatreService>
 ) -> Result<Vec<TicketType>> {
@@ -15,7 +15,7 @@ async fn get_all_ticket_types(
 }
 
 #[post("/new")]
-async fn create_ticket_type(
+pub async fn create_ticket_type(
     path: web::Path<uuid::Uuid>,
     new_ticket_type: web::Json<FormTicketType>,
     theatre_service: web::Data<TheatreService>,
@@ -44,7 +44,7 @@ async fn create_ticket_type(
 }
 
 #[delete("/{ttid}")]
-async fn delete_ticket_type(
+pub async fn delete_ticket_type(
     path: web::Path<(uuid::Uuid, uuid::Uuid)>,
     theatre_service: web::Data<TheatreService>,
     user_service: web::Data<UserService>,

@@ -3,12 +3,12 @@ use crate::{model::Language, services::language::LanguageService};
 use super::*;
 
 #[get("/all")]
-async fn get_all_languages(language_service: web::Data<LanguageService>) -> Result<Vec<Language>> {
+pub async fn get_all_languages(language_service: web::Data<LanguageService>) -> Result<Vec<Language>> {
     Ok(language_service.get_all_languages().await?.into())
 }
 
 #[get("/{id}")]
-async fn get_language(
+pub async fn get_language(
     path: web::Path<uuid::Uuid>,
     language_service: web::Data<LanguageService>,
 ) -> Result<Language> {

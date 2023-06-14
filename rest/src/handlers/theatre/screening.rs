@@ -31,7 +31,7 @@ fn validate_timeline_query(query: &TimelineQuery) -> std::result::Result<(), Val
 }
 
 #[get("/timeline")]
-async fn get_timeline(
+pub async fn get_timeline(
     path: web::Path<(uuid::Uuid,)>,
     query: web::Path<TimelineQuery>,
     theatre_service: web::Data<TheatreService>,
@@ -53,7 +53,7 @@ async fn get_timeline(
 }
 
 #[get("/{tsid}")]
-async fn get_theatre_screening(
+pub async fn get_theatre_screening(
     path: web::Path<(uuid::Uuid, uuid::Uuid)>,
     theatre_service: web::Data<TheatreService>,
 ) -> Result<TheatreScreening> {
@@ -72,7 +72,7 @@ async fn get_theatre_screening(
 }
 
 #[put("/{tsid}")]
-async fn update_theatre_screening(
+pub async fn update_theatre_screening(
     path: web::Path<(uuid::Uuid, uuid::Uuid)>,
     new_theatre_screening: web::Json<FormTheatreScreening>,
     user_service: web::Data<UserService>,
@@ -104,7 +104,7 @@ async fn update_theatre_screening(
 }
 
 #[delete("/{tsid}")]
-async fn delete_theatre_screening(
+pub async fn delete_theatre_screening(
     path: web::Path<(uuid::Uuid, uuid::Uuid)>,
     user_service: web::Data<UserService>,
     theatre_service: web::Data<TheatreService>,
@@ -135,7 +135,7 @@ async fn delete_theatre_screening(
 }
 
 #[post("/new")]
-async fn create_theatre_screening(
+pub async fn create_theatre_screening(
     path: web::Path<uuid::Uuid>,
     new_theatre_screening: web::Json<FormTheatreScreening>,
     user_service: web::Data<UserService>,

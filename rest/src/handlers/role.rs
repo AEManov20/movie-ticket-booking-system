@@ -17,7 +17,7 @@ struct BridgeRoleQuery {
 }
 
 #[get("/available")]
-async fn get_all_roles(
+pub async fn get_all_roles(
     role_service: web::Data<RoleService>,
 ) -> Result<HashMap<String, uuid::Uuid>> {
     Ok(role_service
@@ -30,7 +30,7 @@ async fn get_all_roles(
 }
 
 #[get("/query")]
-async fn query_bridge_roles(
+pub async fn query_bridge_roles(
     query: web::Query<BridgeRoleQuery>,
     role_service: web::Data<RoleService>,
     bridge_role_service: web::Data<BridgeRoleService>,
@@ -56,7 +56,7 @@ async fn query_bridge_roles(
 }
 
 #[post("/new")]
-async fn register_bridge_role(
+pub async fn register_bridge_role(
     new_role: web::Json<UserTheatreRole>,
     bridge_role_service: web::Data<BridgeRoleService>,
     role_service: web::Data<RoleService>,
@@ -83,7 +83,7 @@ async fn register_bridge_role(
 }
 
 #[delete("/delete")]
-async fn unregister_bridge_role(
+pub async fn unregister_bridge_role(
     del: web::Json<UserTheatreRole>,
     bridge_role_service: web::Data<BridgeRoleService>,
     role_service: web::Data<RoleService>,

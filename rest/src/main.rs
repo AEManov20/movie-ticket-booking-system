@@ -6,12 +6,14 @@ mod services;
 mod util;
 mod vars;
 
-use actix_web::{web, App, HttpResponse, HttpServer, Responder};
+mod doc;
+
+use actix_web::{web, App, HttpResponse, HttpServer, error::ErrorImATeapot};
 use services::{movie::MovieService, theatre::TheatreService, user::UserService, bridge_role::BridgeRoleService, role::RoleService, language::LanguageService};
 use util::get_connection_pool;
 
-async fn root_response() -> impl Responder {
-    HttpResponse::Ok().body("*wind noises*")
+async fn root_response() -> HttpResponse {
+    ErrorImATeapot("*wind noises*").into()
 }
 
 #[actix_web::main]

@@ -13,7 +13,7 @@ mod ticket_type;
 mod hall;
 
 #[post("/new")]
-async fn new_theatre(
+pub async fn new_theatre(
     theatre: web::Json<FormTheatre>,
     theatre_service: web::Data<TheatreService>,
     user_service: web::Data<UserService>,
@@ -29,7 +29,7 @@ async fn new_theatre(
 }
 
 #[get("/{id}")]
-async fn get_theatre(
+pub async fn get_theatre(
     path: web::Path<(uuid::Uuid,)>,
     theatre_service: web::Data<TheatreService>,
 ) -> Result<Theatre> {
@@ -40,7 +40,7 @@ async fn get_theatre(
 }
 
 #[put("/{id}")]
-async fn update_theatre(
+pub async fn update_theatre(
     path: web::Path<(uuid::Uuid,)>,
     form: web::Json<FormTheatre>,
     theatre_service: web::Data<TheatreService>,
@@ -71,7 +71,7 @@ async fn update_theatre(
 }
 
 #[delete("/{id}")]
-async fn delete_theatre(
+pub async fn delete_theatre(
     path: web::Path<(uuid::Uuid,)>,
     theatre_service: web::Data<TheatreService>,
     user_service: web::Data<UserService>,

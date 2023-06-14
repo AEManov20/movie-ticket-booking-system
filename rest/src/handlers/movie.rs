@@ -36,7 +36,7 @@ struct MovieReviewQuery {
 }
 
 #[post("/review/new")]
-async fn submit_new_review(
+pub async fn submit_new_review(
     new_review: web::Json<NewReviewPayload>,
     user_service: web::Data<UserService>,
     claims: JwtClaims,
@@ -47,7 +47,7 @@ async fn submit_new_review(
 }
 
 #[get("/review/{id}")]
-async fn get_review_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::Data<MovieService>) -> Result<MovieReview> {
+pub async fn get_review_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::Data<MovieService>) -> Result<MovieReview> {
     match movie_service.get_review_by_id(path.0).await? {
         Some(v) => Ok(v.into()),
         None => Err(ErrorType::NotFound)
@@ -55,7 +55,7 @@ async fn get_review_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::Da
 }
 
 #[delete("/review/{id}")]
-async fn delete_review_by_id(path: web::Path<(uuid::Uuid,)>, user_service: web::Data<UserService>, movie_service: web::Data<MovieService>, claims: JwtClaims) -> Result<()> {
+pub async fn delete_review_by_id(path: web::Path<(uuid::Uuid,)>, user_service: web::Data<UserService>, movie_service: web::Data<MovieService>, claims: JwtClaims) -> Result<()> {
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let Some(review) = movie_service.get_review_by_id(path.0).await? else {
         return Err(ErrorType::NotFound)
@@ -71,19 +71,19 @@ async fn delete_review_by_id(path: web::Path<(uuid::Uuid,)>, user_service: web::
 }
 
 #[get("/{id}/reviews")]
-async fn get_reviews(path: web::Path<(uuid::Uuid,)>, query: web::Query<MovieReviewQuery>, movie_service: web::Data<MovieService>) -> Result<Vec<MovieReview>> {
+pub async fn get_reviews(path: web::Path<(uuid::Uuid,)>, query: web::Query<MovieReviewQuery>, movie_service: web::Data<MovieService>) -> Result<Vec<MovieReview>> {
     query.validate()?;
 
     Ok(movie_service.query_reviews(query.movie_id, query.limit, query.offset, query.sort_by).await?.into())
 }
 
 #[get("/{id}/theatres")]
-async fn get_theatres_by_movie_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::Data<MovieService>) -> Result<Vec<Theatre>> {
+pub async fn get_theatres_by_movie_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::Data<MovieService>) -> Result<Vec<Theatre>> {
     todo!();
 }
 
 #[get("/query")]
-async fn query_movies(
+pub async fn query_movies(
     query: web::Query<MovieQuery>,
     movie_service: web::Data<MovieService>,
 ) -> Result<Vec<Movie>> {
@@ -93,7 +93,7 @@ async fn query_movies(
 }
 
 #[get("/{id}")]
-async fn get_movie_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::Data<MovieService>) -> Result<Movie> {
+pub async fn get_movie_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::Data<MovieService>) -> Result<Movie> {
     match movie_service.get_by_id(path.0).await? {
         Some(v) => {
             if !v.is_deleted { Ok(v.into()) }
@@ -104,7 +104,7 @@ async fn get_movie_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::Dat
 }
 
 #[delete("/{id}")]
-async fn delete_movie_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::Data<MovieService>, user_service: web::Data<UserService>, claims: JwtClaims) -> Result<()> {
+pub async fn delete_movie_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::Data<MovieService>, user_service: web::Data<UserService>, claims: JwtClaims) -> Result<()> {
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
 
     if user.is_super_user {
@@ -115,7 +115,7 @@ async fn delete_movie_by_id(path: web::Path<(uuid::Uuid,)>, movie_service: web::
 }
 
 #[post("/new")]
-async fn insert_movie(movie: web::Json<FormMovie>, movie_service: web::Data<MovieService>, user_service: web::Data<UserService>, claims: JwtClaims) -> Result<Movie> {
+pub async fn insert_movie(movie: web::Json<FormMovie>, movie_service: web::Data<MovieService>, user_service: web::Data<UserService>, claims: JwtClaims) -> Result<Movie> {
     movie.validate()?;
 
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;

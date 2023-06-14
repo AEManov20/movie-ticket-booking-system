@@ -40,7 +40,7 @@ pub struct SuccessResponse<T>(pub T);
 
 type Result<T> = std::result::Result<SuccessResponse<T>, ErrorType>;
 
-async fn user_res_from_jwt(
+pub async fn user_res_from_jwt(
     claims: &JwtClaims,
     user_service: &UserService,
 ) -> std::result::Result<(UserResource, User), ErrorType> {

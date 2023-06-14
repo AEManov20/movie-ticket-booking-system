@@ -3,7 +3,7 @@ use crate::model::{FormHall, Hall};
 use super::*;
 
 #[get("/all")]
-async fn get_halls(
+pub async fn get_halls(
     path: web::Path<uuid::Uuid>,
     theatre_service: web::Data<TheatreService>,
 ) -> Result<Vec<Hall>> {
@@ -22,7 +22,7 @@ async fn get_halls(
 }
 
 #[post("/new")]
-async fn create_hall(
+pub async fn create_hall(
     path: web::Path<uuid::Uuid>,
     new_hall: web::Json<FormHall>,
     theatre_service: web::Data<TheatreService>,
@@ -52,7 +52,7 @@ async fn create_hall(
 }
 
 #[delete("/hid")]
-async fn delete_hall(
+pub async fn delete_hall(
     path: web::Path<(uuid::Uuid, uuid::Uuid)>,
     theatre_service: web::Data<TheatreService>,
     role_service: web::Data<RoleService>,
