@@ -4,6 +4,10 @@ use actix_web::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use utoipa::{
+    openapi::{RefOr, Schema},
+    PartialSchema, ToSchema, ToResponse,
+};
 use validator::{Validate, ValidationErrors};
 
 use crate::{
@@ -15,13 +19,13 @@ use crate::{
 };
 
 pub mod auth;
+pub mod language;
 pub mod movie;
 pub mod role;
 pub mod theatre;
 pub mod user;
-pub mod language;
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Debug, ToSchema)]
 #[serde(tag = "type", content = "data")]
 pub enum ErrorType {
     Validation(ValidationErrors),
@@ -60,8 +64,8 @@ pub async fn user_res_from_jwt(
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.configure(auth::config)
-        .configure(movie::config)
         .configure(theatre::config)
+        .configure(movie::config)
         .configure(user::config)
         .configure(role::config)
         .configure(language::config);
@@ -83,10 +87,7 @@ where
     type Body = BoxBody;
 
     fn respond_to(self, req: &actix_web::HttpRequest) -> HttpResponse<Self::Body> {
-        let res = json!({
-            "success": true,
-            "data": self.0
-        });
+        let res = json!(self.0);
 
         HttpResponse::Ok().json(res)
     }
@@ -113,7 +114,6 @@ impl std::fmt::Display for ErrorType {
 impl ResponseError for ErrorType {
     fn error_response(&self) -> HttpResponse<actix_web::body::BoxBody> {
         let res = json!({
-            "success": false,
             "error": &self,
         });
 
@@ -134,4 +134,16 @@ impl ResponseError for ErrorType {
             ErrorType::Conflict => StatusCode::CONFLICT,
         }
     }
+}
+
+#[derive(ToResponse, Serialize)]
+pub struct DocError {
+    pub error: ErrorType
+}
+
+#[macro_export]
+macro_rules! doc {
+    ($err:expr) => {
+        DocError { error: $err }
+    };
 }

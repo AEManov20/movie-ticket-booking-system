@@ -2,6 +2,7 @@ use crate::model::{FormHall, Hall};
 
 use super::*;
 
+/// Gets all halls for a given theatre ID
 #[utoipa::path(context_path = "/api/v1/theatre/{id}/hall")]
 #[get("/all")]
 pub async fn get_halls(
@@ -22,6 +23,7 @@ pub async fn get_halls(
         .into())
 }
 
+/// Creates a new hall
 #[utoipa::path(context_path = "/api/v1/theatre/{id}/hall")]
 #[post("/new")]
 pub async fn create_hall(
@@ -53,6 +55,7 @@ pub async fn create_hall(
     Ok(hall.into())
 }
 
+/// Deletes a hall
 #[utoipa::path(context_path = "/api/v1/theatre/{id}/hall")]
 #[delete("/hid")]
 pub async fn delete_hall(

@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use rayon::prelude::*;
+use utoipa::ToSchema;
 
 use crate::{
     check_roles,
@@ -10,20 +11,21 @@ use crate::{
 
 use super::*;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize, ToSchema)]
 pub enum Action {
     Create,
     Delete,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct UserRoleForm {
+    #[schema(example = json!(Action::Create))]
     pub action: Action,
     pub user_id: uuid::Uuid,
     pub role_id: uuid::Uuid,
 }
 
-/// returns a hashmap with (user_id, role_id)
+/// Fetches all assigned user roles in the scope of the selected theatre ID
 #[utoipa::path(context_path = "/api/v1/theatre/{id}/role")]
 #[get("/all")]
 pub async fn get_all_roles(
@@ -55,6 +57,7 @@ pub async fn get_all_roles(
         .into())
 }
 
+/// Creates/Deletes assigned user roles in the scope of the selected theatre ID
 #[utoipa::path(context_path = "/api/v1/theatre/{id}/role")]
 #[put("/update")]
 pub async fn update_roles_batch(

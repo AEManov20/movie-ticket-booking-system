@@ -7,13 +7,16 @@ use crate::{
     services::user::{LoginResponse, UserResource, UserService},
 };
 
+use utoipa::ToSchema;
+
 // TODO: implement auth from other providers
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct EmailVerificationQuery {
     pub email_key: String,
 }
 
+/// Returns an auth token, given correct login data is supplied
 #[utoipa::path(context_path = "/api/v1/auth")]
 #[get("/login")]
 pub async fn login_user(
@@ -43,6 +46,7 @@ pub async fn login_user(
     }
 }
 
+/// Registers a new user given that the supplied data is valid
 #[utoipa::path(context_path = "/api/v1/auth")]
 #[post("/register")]
 pub async fn register_user(
@@ -64,6 +68,7 @@ pub async fn register_user(
     Ok(user.create_email_jwt()?.into())
 }
 
+/// Marks an account as verified/activated, given that the email token is valid
 #[utoipa::path(context_path = "/api/v1/auth")]
 #[get("/verify")]
 pub async fn verify_email(

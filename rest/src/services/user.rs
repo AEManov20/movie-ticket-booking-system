@@ -7,6 +7,7 @@ use jsonwebtoken::Validation;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header};
 use rayon::prelude::*;
 use serde::Serialize;
+use utoipa::ToResponse;
 
 use super::DatabaseError;
 use crate::model::*;
@@ -156,7 +157,7 @@ impl UserService {
     }
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToResponse)]
 pub struct LoginResponse {
     token: String,
 }

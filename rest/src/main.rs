@@ -15,7 +15,7 @@ use services::{
 };
 use util::get_connection_pool;
 use utoipa::OpenApi;
-use utoipa_swagger_ui::SwaggerUi;
+use utoipa_swagger_ui::{SwaggerUi, Url};
 
 async fn root_response() -> HttpResponse {
     ErrorImATeapot("*wind noises*").into()
@@ -35,10 +35,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let role_service = RoleService::new(pool.clone());
     let language_service = LanguageService::new(pool.clone());
 
-    let openapi = doc::ApiDoc::openapi();
+    let docs = vec![
+        (Url::new("role.json", "/api-docs/role.json"), doc::RoleApiDoc::openapi()),
+        (Url::new("theatre.json", "/api-docs/theatre.json"), doc::TheatreApiDoc::openapi()),
+        (Url::new("movie.json", "/api-docs/movie.json"), doc::MovieApiDoc::openapi()),
+        (Url::new("language.json", "/api-docs/language.json"), doc::LanguageApiDoc::openapi()),
+        (Url::new("auth.json", "/api-docs/auth.json"), doc::AuthApiDoc::openapi()),
+    ];
 
     HttpServer::new(move || {
-        App::new()
+        let app = App::new()
             .wrap(actix_web::middleware::Logger::default())
             .app_data(web::Data::new(movie_service.clone()))
             .app_data(web::Data::new(theatre_service.clone()))
@@ -46,11 +52,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .app_data(web::Data::new(bridge_role_service.clone()))
             .app_data(web::Data::new(role_service.clone()))
             .app_data(web::Data::new(language_service.clone()))
-            .route("/", web::get().to(root_response))
-            .service(web::scope("/api/v1").configure(handlers::config))
-            .service(
-                SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-docs/openapi.json", openapi.clone()),
-            )
+            .service(web::scope("/api/v1").configure(handlers::config));
+            // .service(
+            //     SwaggerUi::new("/swagger-ui/{_:.*}").urls(docs.clone()),
+            // )
+            // .route("/{tail:.*}", web::get().to(root_response))
+        app
     })
     .bind(("127.0.0.1", 8080))?
     .run()

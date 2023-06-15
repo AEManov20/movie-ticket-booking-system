@@ -1,18 +1,26 @@
 use crate::{
-    check_roles,
+    check_roles, doc,
     model::{FormTheatre, Role, Theatre},
     services::{bridge_role::*, role::*, theatre::*},
 };
 
 use super::*;
 
+pub mod hall;
 pub mod role;
 pub mod screening;
 pub mod ticket;
 pub mod ticket_type;
-pub mod hall;
 
-#[utoipa::path(context_path = "/api/v1/theatre")]
+#[utoipa::path(
+    context_path = "/api/v1/theatre",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
+        (status = OK, description = "A new theatre was successfully created", body = Theatre)
+    )
+)]
 #[post("/new")]
 pub async fn new_theatre(
     theatre: web::Json<FormTheatre>,
@@ -94,6 +102,10 @@ pub async fn delete_theatre(
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/theatre")
+            .service(new_theatre)
+            .service(get_theatre)
+            .service(update_theatre)
+            .service(delete_theatre)
             .service(
                 web::scope("/{id}")
                     .configure(screening::config)
@@ -101,10 +113,6 @@ pub fn config(cfg: &mut web::ServiceConfig) {
                     .configure(ticket_type::config)
                     .configure(ticket::config)
                     .configure(hall::config),
-            )
-            .service(new_theatre)
-            .service(get_theatre)
-            .service(update_theatre)
-            .service(delete_theatre),
+            ),
     );
 }

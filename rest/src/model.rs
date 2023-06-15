@@ -4,6 +4,7 @@ use chrono::Utc;
 use diesel::prelude::*;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
+use utoipa::{ToSchema, ToResponse};
 use std::future::{ready, Ready};
 use validator::Validate;
 
@@ -27,21 +28,26 @@ pub struct User {
     pub is_deleted: bool,
 }
 
-#[derive(Deserialize, Debug, Clone, Validate)]
+#[derive(Deserialize, Debug, Clone, Validate, ToSchema)]
 pub struct FormUser {
+    #[schema(example = "John")]
     #[validate(length(min = 1, max = 50))]
     pub first_name: String,
+    #[schema(example = "Doe")]
     #[validate(length(min = 1, max = 50))]
     pub last_name: String,
+    #[schema(example = "john.doe@example.com")]
     #[validate(email, length(max = 150))]
     pub email: String,
+    #[schema(example = "john.doe")]
     #[validate(length(min = 8, max = 50))]
     pub username: String,
+    #[schema(example = "password_123_do_not_use")]
     #[validate(length(min = 12))]
     pub password: String,
 }
 
-#[derive(Deserialize, Debug, Clone, Validate)]
+#[derive(Deserialize, Debug, Clone, Validate, ToSchema)]
 pub struct LoginUser {
     #[validate(length(min = 1))]
     pub email: String,
@@ -85,7 +91,7 @@ pub struct CreateTicket {
     pub seat_column: i32,
 }
 
-#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations)]
+#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations, ToResponse)]
 #[diesel(belongs_to(Hall))]
 #[diesel(belongs_to(Movie))]
 #[diesel(belongs_to(Theatre))]
@@ -94,27 +100,27 @@ pub struct TheatreScreening {
     pub movie_id: uuid::Uuid,
     pub theatre_id: uuid::Uuid,
     pub hall_id: uuid::Uuid,
-    pub subtitles_language: Option<uuid::Uuid>,
-    pub audio_language: uuid::Uuid,
+    pub subtitles_language_id: Option<uuid::Uuid>,
+    pub audio_language_id: uuid::Uuid,
     pub starting_time: chrono::NaiveDateTime,
     pub is_3d: bool,
     pub status: i32,
     pub is_deleted: bool,
 }
 
-#[derive(Insertable, Deserialize, AsChangeset, Validate)]
+#[derive(Insertable, Deserialize, AsChangeset, Validate, ToSchema)]
 #[diesel(table_name = theatre_screenings)]
 pub struct FormTheatreScreening {
     pub movie_id: uuid::Uuid,
     pub theatre_id: uuid::Uuid,
     pub hall_id: uuid::Uuid,
-    pub subtitles_language: Option<uuid::Uuid>,
-    pub audio_language: uuid::Uuid,
+    pub subtitles_language_id: Option<uuid::Uuid>,
+    pub audio_language_id: uuid::Uuid,
     pub starting_time: chrono::NaiveDateTime,
     pub is_3d: Option<bool>,
 }
 
-#[derive(Serialize, Queryable)]
+#[derive(Serialize, Queryable, ToResponse)]
 pub struct TheatreScreeningEvent {
     pub movie_id: uuid::Uuid,
     pub theatre_movie_id: uuid::Uuid,
@@ -123,7 +129,7 @@ pub struct TheatreScreeningEvent {
     pub movie_name: String,
 }
 
-#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations)]
+#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations, ToResponse)]
 #[diesel(belongs_to(Theatre))]
 pub struct Hall {
     pub id: uuid::Uuid,
@@ -133,16 +139,17 @@ pub struct Hall {
     pub is_deleted: bool
 }
 
-#[derive(Insertable, Deserialize, AsChangeset, Validate)]
+#[derive(Insertable, Deserialize, AsChangeset, Validate, ToSchema)]
 #[diesel(table_name = halls)]
 pub struct FormHall {
     #[validate(length(max = 50))]
+    #[schema(example = "Apollo 1")]
     pub name: String,
     pub theatre_id: uuid::Uuid,
     pub seat_data: serde_json::Value,
 }
 
-#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset)]
+#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, ToResponse)]
 pub struct Theatre {
     pub id: uuid::Uuid,
     pub name: String,
@@ -152,9 +159,10 @@ pub struct Theatre {
     pub is_deleted: bool,
 }
 
-#[derive(Insertable, Deserialize, AsChangeset, Validate)]
+#[derive(Insertable, Deserialize, AsChangeset, Validate, ToSchema)]
 #[diesel(table_name = theatres)]
 pub struct FormTheatre {
+    #[schema(example = "September")]
     #[validate(length(max = 50))]
     pub name: String,
     #[validate(range(min = -90., max = 90.))]
@@ -163,7 +171,7 @@ pub struct FormTheatre {
     pub location_lon: f64,
 }
 
-#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset)]
+#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, ToResponse)]
 pub struct Movie {
     pub id: uuid::Uuid,
     pub name: String,
@@ -176,22 +184,27 @@ pub struct Movie {
     pub is_deleted: bool,
 }
 
-#[derive(Insertable, Deserialize, AsChangeset, Clone, Validate)]
+#[derive(Insertable, Deserialize, AsChangeset, Clone, Validate, ToSchema)]
 #[diesel(table_name = movies)]
 pub struct FormMovie {
+    #[schema(example = "Harry Potter")]
     #[validate(length(min = 1))]
     pub name: String,
+    #[schema(example = "lorem ipsum doret")]
     #[validate(length(max = 65535))]
     pub description: String,
+    #[schema(example = "Action|Romance|Fantasy")]
     #[validate(length(max = 250))]
     pub genre: String,
+    #[schema(example = json!(chrono::NaiveDate::from_isoywd_opt(2009, 41, chrono::Weekday::Thu)))]
     pub release_date: chrono::NaiveDate,
+    #[schema(example = 161.)]
     pub length: f64,
     #[validate(url, length(max = 250))]
     pub imdb_link: Option<String>,
 }
 
-#[derive(Selectable, Identifiable, Associations, Queryable, Serialize, Debug, Clone, AsChangeset)]
+#[derive(Selectable, Identifiable, Associations, Queryable, Serialize, Debug, Clone, AsChangeset, ToResponse)]
 #[diesel(belongs_to(User, foreign_key = author_user_id))]
 #[diesel(belongs_to(Movie))]
 pub struct MovieReview {
@@ -219,7 +232,7 @@ pub struct FormMovieReview {
     pub rating: f64,
 }
 
-#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations)]
+#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations, ToResponse)]
 #[diesel(belongs_to(Theatre))]
 pub struct TicketType {
     pub id: uuid::Uuid,
@@ -233,7 +246,7 @@ pub struct TicketType {
     pub is_deleted: bool
 }
 
-#[derive(Selectable, Identifiable, Insertable, Queryable, Serialize, Deserialize, Debug, Clone, Associations)]
+#[derive(Selectable, Identifiable, Insertable, Queryable, Serialize, Deserialize, Debug, Clone, Associations, ToResponse)]
 #[diesel(belongs_to(User))]
 #[diesel(belongs_to(Theatre))]
 #[diesel(belongs_to(TheatreRole, foreign_key = role_id))]
@@ -279,14 +292,14 @@ pub struct JwtClaims {
     pub exp: i64,
 }
 
-#[derive(Selectable, Identifiable, Insertable, Queryable, Serialize, Deserialize, Debug, Clone)]
+#[derive(Selectable, Identifiable, Insertable, Queryable, Serialize, Deserialize, Debug, Clone, ToResponse)]
 pub struct Language {
     pub id: uuid::Uuid,
     pub code: String,
     pub name: String
 }
 
-#[derive(Insertable, Deserialize, AsChangeset)]
+#[derive(Insertable, Deserialize, AsChangeset, ToSchema)]
 #[diesel(table_name = ticket_types)]
 pub struct FormTicketType {
     #[serde(alias = "type")]

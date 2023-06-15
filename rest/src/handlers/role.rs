@@ -2,6 +2,8 @@ use std::collections::HashMap;
 
 use rayon::prelude::*;
 
+use utoipa::ToSchema;
+
 use crate::{
     model::{Role, UserTheatreRole},
     services::{bridge_role::BridgeRoleService, role::RoleService}, check_roles,
@@ -9,13 +11,14 @@ use crate::{
 
 use super::*;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 pub struct BridgeRoleQuery {
     pub role_id: uuid::Uuid,
     pub user_id: Option<uuid::Uuid>,
     pub theatre_id: uuid::Uuid,
 }
 
+/// Gets available roles in the form of a dictionary
 #[utoipa::path(context_path = "/api/v1/role")]
 #[get("/available")]
 pub async fn get_all_roles(
@@ -30,6 +33,7 @@ pub async fn get_all_roles(
         .into())
 }
 
+/// Queries assigned user roles and the theatre they're linked to
 #[utoipa::path(context_path = "/api/v1/role")]
 #[get("/query_bridge")]
 pub async fn query_bridge_roles(

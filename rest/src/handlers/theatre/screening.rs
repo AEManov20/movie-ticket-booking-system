@@ -30,6 +30,7 @@ fn validate_timeline_query(query: &TimelineQuery) -> std::result::Result<(), Val
     Ok(())
 }
 
+/// Fetches screening events over a given timespan
 #[utoipa::path(context_path = "/api/v1/theatre/{id}/screening")]
 #[get("/timeline")]
 pub async fn get_timeline(
@@ -53,6 +54,7 @@ pub async fn get_timeline(
         .into())
 }
 
+/// Fetches data about a given theatre screening by ID
 #[utoipa::path(context_path = "/api/v1/theatre/{id}/screening")]
 #[get("/{tsid}")]
 pub async fn get_theatre_screening(
@@ -73,6 +75,7 @@ pub async fn get_theatre_screening(
     }
 }
 
+/// Updates a theatre screening
 #[utoipa::path(context_path = "/api/v1/theatre/{id}/screening")]
 #[put("/{tsid}")]
 pub async fn update_theatre_screening(
@@ -106,6 +109,7 @@ pub async fn update_theatre_screening(
         .into())
 }
 
+/// Deletes a theatre screening
 #[utoipa::path(context_path = "/api/v1/theatre/{id}/screening")]
 #[delete("/{tsid}")]
 pub async fn delete_theatre_screening(
@@ -138,6 +142,7 @@ pub async fn delete_theatre_screening(
         .into())
 }
 
+/// Creates a new theatre screening
 #[utoipa::path(context_path = "/api/v1/theatre/{id}/screening")]
 #[post("/new")]
 pub async fn create_theatre_screening(
@@ -175,9 +180,9 @@ pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/screening")
             .service(get_timeline)
-            .service(get_theatre_screening)
             .service(update_theatre_screening)
             .service(delete_theatre_screening)
-            .service(create_theatre_screening),
+            .service(create_theatre_screening)
+            .service(get_theatre_screening),
     );
 }
