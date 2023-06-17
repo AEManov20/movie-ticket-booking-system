@@ -4,20 +4,32 @@ use chrono::Utc;
 use super::ErrorType;
 use crate::{
     model::{FormUser, JwtType, LoginUser, User},
-    services::user::{LoginResponse, UserResource, UserService},
+    services::user::{LoginResponse, UserResource, UserService}, doc,
 };
 
-use utoipa::ToSchema;
+use utoipa::{ToSchema, IntoParams};
 
 // TODO: implement auth from other providers
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema, IntoParams)]
 pub struct EmailVerificationQuery {
     pub email_key: String,
 }
 
 /// Returns an auth token, given correct login data is supplied
-#[utoipa::path(context_path = "/api/v1/auth")]
+#[utoipa::path(
+    context_path = "/api/v1/auth",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = UNAUTHORIZED, description = "Email is not verified", body = DocError),
+        (status = CONFLICT, description = "User isn't registered with a password but rather with an external provider", body = DocError),
+        (status = OK, description = "User successfully logged in and auth key returned", body = LoginResponse)
+    ),
+    params(
+        LoginUser
+    )
+)]
 #[get("/login")]
 pub async fn login_user(
     params: web::Query<LoginUser>,
@@ -47,7 +59,16 @@ pub async fn login_user(
 }
 
 /// Registers a new user given that the supplied data is valid
-#[utoipa::path(context_path = "/api/v1/auth")]
+#[utoipa::path(
+    context_path = "/api/v1/auth",
+    request_body = FormUser,
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = CONFLICT, description = "User already registered", body = DocError),
+        (status = OK, description = "User successfully registered", body = LoginResponse)
+    )
+)]
 #[post("/register")]
 pub async fn register_user(
     user: web::Json<FormUser>,
@@ -65,11 +86,22 @@ pub async fn register_user(
 
     let user = user_service.create(user.into_inner()).await?;
 
+    // TODO: implement emailing the user with the token
     Ok(user.create_email_jwt()?.into())
 }
 
 /// Marks an account as verified/activated, given that the email token is valid
-#[utoipa::path(context_path = "/api/v1/auth")]
+#[utoipa::path(
+    context_path = "/api/v1/auth",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = UNAUTHORIZED, description = "Email verification token has expired", body = DocError),
+        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+    ),
+    params(
+        EmailVerificationQuery
+    )
+)]
 #[get("/verify")]
 pub async fn verify_email(
     query: web::Query<EmailVerificationQuery>,
@@ -88,7 +120,7 @@ pub async fn verify_email(
     };
 
     if chrono::Utc::now() < chrono::DateTime::<chrono::Utc>::from_utc(time, Utc) {
-        let Some(user_res) = user_service.get_by_id(user_id).await? else {
+        let Some(mut user_res) = user_service.get_by_id(user_id).await? else {
             return Err(ErrorType::ServerError)
         };
 

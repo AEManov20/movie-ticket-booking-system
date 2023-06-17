@@ -3,7 +3,17 @@ use crate::model::{FormTicketType, TicketType};
 use super::*;
 
 /// Gets different ticket types/pricings
-#[utoipa::path(context_path = "/api/v1/theatre/{id}/ticket_type")]
+#[utoipa::path(
+    context_path = "/api/v1/theatre/{id}/ticket_type",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = OK, description = "The selected theatre was found and the TicketTypes were returned", body = Vec<TicketType>)
+    ),
+    params(
+        ("id" = uuid::Uuid, description = "Unique storage ID for Theatre"),
+    ),
+)]
 #[get("/all")]
 pub async fn get_all_ticket_types(
     path: web::Path<uuid::Uuid>,
@@ -17,7 +27,21 @@ pub async fn get_all_ticket_types(
 }
 
 /// Creates a new ticket pricing/type
-#[utoipa::path(context_path = "/api/v1/theatre/{id}/ticket_type")]
+#[utoipa::path(
+    context_path = "/api/v1/theatre/{id}/ticket_type",
+    request_body = FormTicketType,
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || TicketManager)", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
+        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = OK, description = "The selected theatre was found and new TicketType was created")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
 #[post("/new")]
 pub async fn create_ticket_type(
     path: web::Path<uuid::Uuid>,
@@ -35,7 +59,7 @@ pub async fn create_ticket_type(
     };
 
     if !user.is_super_user {
-        check_roles!(
+        check_roles_or!(
             [Role::TheatreOwner, Role::TicketManager],
             user.id,
             theatre_id,
@@ -51,7 +75,23 @@ pub async fn create_ticket_type(
 }
 
 /// Deletes a ticket pricing/type
-#[utoipa::path(context_path = "/api/v1/theatre/{id}/ticket_type")]
+#[utoipa::path(
+    context_path = "/api/v1/theatre/{id}/ticket_type",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || TicketManager)", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
+        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = OK, description = "The selected theatre was found and new TicketType was created")
+    ),
+    params(
+        ("id" = uuid::Uuid, description = "Unique storage ID for Theatre"),
+        ("ttid", description = "Unique storage ID for TicketType")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
 #[delete("/{ttid}")]
 pub async fn delete_ticket_type(
     path: web::Path<(uuid::Uuid, uuid::Uuid)>,
@@ -68,7 +108,7 @@ pub async fn delete_ticket_type(
     };
 
     if !user.is_super_user {
-        check_roles!(
+        check_roles_or!(
             [Role::TheatreOwner, Role::TicketManager],
             user.id,
             theatre_id,

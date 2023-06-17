@@ -140,16 +140,33 @@ macro_rules! check_role {
             .first()
             .is_some()
         {
-            return Err(ErrorType::InsufficientPermission);
-        }
+            true
+        } else { false }
     };
 }
 
 #[macro_export]
-macro_rules! check_roles {
+macro_rules! check_roles_or {
     ([$($role:expr),*], $uid:expr, $tid:expr, $brs:expr, $rs:expr) => {
-        $(
-            $crate::check_role!($role, $uid, $tid, $brs, $rs);
-        )*
+        let matches = vec![$(
+            $crate::check_role!($role, $uid, $tid, $brs, $rs)
+        ),*];
+
+        if !matches.iter().fold(false, |mut acc, x| { acc = acc || *x; acc }) {
+            return Err(ErrorType::InsufficientPermission)
+        }
+    }
+}
+
+#[macro_export]
+macro_rules! check_roles_and {
+    ([$($role:expr),*], $uid:expr, $tid:expr, $brs:expr, $rs:expr) => {
+        let matches = vec![$(
+            $crate::check_role!($role, $uid, $tid, $brs, $rs)
+        ),*];
+
+        if !matches.iter().fold(false, |mut acc, x| { acc = acc && *x; acc }) {
+            return Err(ErrorType::InsufficientPermission)
+        }
     }
 }

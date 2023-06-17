@@ -7,7 +7,7 @@ use jsonwebtoken::Validation;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header};
 use rayon::prelude::*;
 use serde::Serialize;
-use utoipa::ToResponse;
+use utoipa::{ToResponse, ToSchema};
 
 use super::DatabaseError;
 use crate::model::*;
@@ -145,9 +145,7 @@ impl UserService {
             .get()
             .await?
             .interact(move |conn| {
-                diesel::update(users)
-                    .filter(is_deleted.eq(false))
-                    .filter(id.eq(id_))
+                diesel::update(users.filter(id.eq(id_)).filter(is_deleted.eq(false)))
                     .set(is_deleted.eq(true))
                     .execute(conn)
             })
@@ -157,7 +155,7 @@ impl UserService {
     }
 }
 
-#[derive(Serialize, ToResponse)]
+#[derive(Serialize, ToSchema)]
 pub struct LoginResponse {
     token: String,
 }
@@ -227,19 +225,20 @@ impl UserResource {
         .claims)
     }
 
-    pub async fn activate(&self) -> Result<(), DatabaseError> {
+    pub async fn activate(&mut self) -> Result<(), DatabaseError> {
         use crate::schema::users::dsl::*;
 
         let conn = self.pool.get().await?;
         let user = self.user.clone();
 
         conn.interact(move |conn| {
-            diesel::update(users)
-                .filter(id.eq(user.id))
+            diesel::update(users.filter(id.eq(user.id)).filter(is_deleted.eq(false)))
                 .set(is_activated.eq(true))
                 .execute(conn)
         })
         .await??;
+
+        self.user.is_activated = true;
 
         Ok(())
     }
@@ -252,8 +251,7 @@ impl UserResource {
 
         let result = conn
             .interact(move |conn| {
-                diesel::update(users)
-                    .filter(id.eq(user.id))
+                diesel::update(users.filter(id.eq(user.id)).filter(is_deleted.eq(false)))
                     .set((
                         first_name.eq(new_user.first_name.clone()),
                         last_name.eq(new_user.last_name.clone()),
@@ -292,8 +290,7 @@ impl UserResource {
                         return Err(NotFound);
                     }
 
-                    Ok(diesel::update(users)
-                        .filter(id.eq(id_))
+                    Ok(diesel::update(users.filter(id.eq(id_)).filter(is_deleted.eq(false)))
                         .set(password_hash.eq(hash))
                         .returning(User::as_returning())
                         .get_result(conn)?)
@@ -378,17 +375,15 @@ impl UserResource {
 
     pub async fn create_review(
         &self,
-        content: Option<String>,
-        rating: f64,
-        movie_id: uuid::Uuid,
+        review: FormMovieReview
     ) -> Result<MovieReview, DatabaseError> {
         let conn = self.pool.get().await?;
 
         let review = CreateMovieReview {
             author_user_id: self.user.id,
-            content,
-            rating,
-            movie_id,
+            content: review.content,
+            movie_id: review.movie_id,
+            rating: review.rating
         };
 
         Ok(conn
@@ -414,9 +409,7 @@ impl UserResource {
 
         Ok(conn
             .interact(move |conn| {
-                diesel::update(movie_reviews)
-                    .filter(id.eq(id_))
-                    .filter(author_user_id.eq(user_id))
+                diesel::update(movie_reviews.filter(id.eq(id_)).filter(author_user_id.eq(user_id)))
                     .set((content.eq(content_), rating.eq(rating_)))
                     .returning(MovieReview::as_returning())
                     .get_result(conn)
@@ -489,8 +482,7 @@ impl TicketResource {
         let ticket = self.ticket.clone();
 
         conn.interact(move |conn| {
-            diesel::update(tickets)
-                .filter(id.eq(ticket.id))
+            diesel::update(tickets.filter(id.eq(ticket.id)))
                 .set(used.eq(state))
                 .execute(conn)
         })

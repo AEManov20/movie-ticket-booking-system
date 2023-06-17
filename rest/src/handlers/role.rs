@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 
 use crate::{
     model::{Role, UserTheatreRole},
-    services::{bridge_role::BridgeRoleService, role::RoleService}, check_roles,
+    services::{bridge_role::BridgeRoleService, role::RoleService}, check_roles_or,
 };
 
 use super::*;
@@ -46,7 +46,7 @@ pub async fn query_bridge_roles(
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
 
     if !user.is_super_user {
-        check_roles!(
+        check_roles_or!(
             [Role::TheatreOwner, Role::UserManager],
             user.id,
             query.theatre_id,

@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use utoipa::{
     openapi::{RefOr, Schema},
-    PartialSchema, ToSchema, ToResponse,
+    PartialSchema, ToResponse, ToSchema,
 };
 use validator::{Validate, ValidationErrors};
 
@@ -28,7 +28,9 @@ pub mod user;
 #[derive(Serialize, Debug, ToSchema)]
 #[serde(tag = "type", content = "data")]
 pub enum ErrorType {
+    #[schema(value_type = Object)]
     Validation(ValidationErrors),
+    #[schema(value_type = Object)]
     Database(#[serde(skip)] DatabaseError),
     InsufficientPermission,
     EmailNotVerified,
@@ -111,6 +113,22 @@ impl std::fmt::Display for ErrorType {
     }
 }
 
+impl ErrorType {
+    fn status_code_diesel_error(err: &diesel::result::Error) -> actix_web::http::StatusCode {
+        match err {
+            diesel::result::Error::NotFound => StatusCode::NOT_FOUND,
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+
+    fn status_code_db_error(err: &DatabaseError) -> actix_web::http::StatusCode {
+        match err {
+            DatabaseError::Query(e) => ErrorType::status_code_diesel_error(e),
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        }
+    }
+}
+
 impl ResponseError for ErrorType {
     fn error_response(&self) -> HttpResponse<actix_web::body::BoxBody> {
         let res = json!({
@@ -122,23 +140,22 @@ impl ResponseError for ErrorType {
 
     fn status_code(&self) -> actix_web::http::StatusCode {
         match self {
-            ErrorType::Database(_) => StatusCode::INTERNAL_SERVER_ERROR,
-            ErrorType::Validation(_) => StatusCode::BAD_REQUEST,
+            ErrorType::Database(e) => ErrorType::status_code_db_error(e),
+            ErrorType::Validation(_) | ErrorType::Invalid => StatusCode::BAD_REQUEST,
             ErrorType::ServerError => StatusCode::INTERNAL_SERVER_ERROR,
             ErrorType::InsufficientPermission => StatusCode::FORBIDDEN,
-            ErrorType::EmailNotVerified => StatusCode::UNAUTHORIZED,
-            ErrorType::Invalid => StatusCode::BAD_REQUEST,
-            ErrorType::Expired => StatusCode::UNAUTHORIZED,
-            ErrorType::NoAuth => StatusCode::UNAUTHORIZED,
+            ErrorType::Expired | ErrorType::NoAuth | ErrorType::EmailNotVerified => {
+                StatusCode::UNAUTHORIZED
+            }
             ErrorType::NotFound => StatusCode::NOT_FOUND,
             ErrorType::Conflict => StatusCode::CONFLICT,
         }
     }
 }
 
-#[derive(ToResponse, Serialize)]
+#[derive(ToSchema, Serialize)]
 pub struct DocError {
-    pub error: ErrorType
+    pub error: ErrorType,
 }
 
 #[macro_export]

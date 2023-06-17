@@ -3,7 +3,17 @@ use crate::model::{FormHall, Hall};
 use super::*;
 
 /// Gets all halls for a given theatre ID
-#[utoipa::path(context_path = "/api/v1/theatre/{id}/hall")]
+#[utoipa::path(
+    context_path = "/api/v1/theatre/{id}/hall",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = OK, description = "The selected theatre was found and its halls were returned", body = Vec<Hall>)
+    ),
+    params(
+        ("id" = uuid::Uuid, description = "Unique storage ID of Theatre")
+    )
+)]
 #[get("/all")]
 pub async fn get_halls(
     path: web::Path<uuid::Uuid>,
@@ -24,7 +34,24 @@ pub async fn get_halls(
 }
 
 /// Creates a new hall
-#[utoipa::path(context_path = "/api/v1/theatre/{id}/hall")]
+#[utoipa::path(
+    context_path = "/api/v1/theatre/{id}/hall",
+    request_body = FormHall,
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner)", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
+        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = OK, description = "The selected theatre was found and the hall was created and returned", body = Hall)
+    ),
+    params(
+        ("id" = uuid::Uuid, description = "Unique storage ID of Theatre")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
 #[post("/new")]
 pub async fn create_hall(
     path: web::Path<uuid::Uuid>,
@@ -35,6 +62,8 @@ pub async fn create_hall(
     user_service: web::Data<UserService>,
     claims: JwtClaims,
 ) -> Result<Hall> {
+    new_hall.validate()?;
+
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let theatre_id = path.into_inner();
     let Some(theatre) = theatre_service.get_by_id(theatre_id).await? else {
@@ -42,7 +71,7 @@ pub async fn create_hall(
     };
 
     if !user.is_super_user {
-        check_roles!(
+        check_roles_or!(
             [Role::TheatreOwner],
             user.id,
             theatre_id,
@@ -56,8 +85,24 @@ pub async fn create_hall(
 }
 
 /// Deletes a hall
-#[utoipa::path(context_path = "/api/v1/theatre/{id}/hall")]
-#[delete("/hid")]
+#[utoipa::path(
+    context_path = "/api/v1/theatre/{id}/hall",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner)", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
+        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = OK, description = "The selected theatre was found and the hall was created and returned", body = Hall)
+    ),
+    params(
+        ("id" = uuid::Uuid, description = "Unique storage ID of Theatre"),
+        ("hid", description = "Unique storage ID for Hall")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+#[delete("/{hid}")]
 pub async fn delete_hall(
     path: web::Path<(uuid::Uuid, uuid::Uuid)>,
     theatre_service: web::Data<TheatreService>,
@@ -73,7 +118,7 @@ pub async fn delete_hall(
     };
 
     if !user.is_super_user {
-        check_roles!(
+        check_roles_or!(
             [Role::TheatreOwner],
             user.id,
             theatre_id,

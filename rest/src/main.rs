@@ -44,7 +44,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ];
 
     HttpServer::new(move || {
-        let app = App::new()
+        App::new()
             .wrap(actix_web::middleware::Logger::default())
             .app_data(web::Data::new(movie_service.clone()))
             .app_data(web::Data::new(theatre_service.clone()))
@@ -52,12 +52,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .app_data(web::Data::new(bridge_role_service.clone()))
             .app_data(web::Data::new(role_service.clone()))
             .app_data(web::Data::new(language_service.clone()))
-            .service(web::scope("/api/v1").configure(handlers::config));
-            // .service(
-            //     SwaggerUi::new("/swagger-ui/{_:.*}").urls(docs.clone()),
-            // )
-            // .route("/{tail:.*}", web::get().to(root_response))
-        app
+            .service(web::scope("/api/v1").configure(handlers::config))
+            .service(
+                SwaggerUi::new("/swagger-ui/{_:.*}").urls(docs.clone()),
+            )
+            .route("/", web::get().to(root_response))
     })
     .bind(("127.0.0.1", 8080))?
     .run()

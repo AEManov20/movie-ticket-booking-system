@@ -4,7 +4,7 @@ use rayon::prelude::*;
 use utoipa::ToSchema;
 
 use crate::{
-    check_roles,
+    check_roles_or,
     model::{Role, UserTheatreRole},
     services::{bridge_role::BridgeRoleService, role::RoleService},
 };
@@ -12,7 +12,7 @@ use crate::{
 use super::*;
 
 #[derive(Deserialize, Serialize, ToSchema)]
-pub enum Action {
+pub enum RoleUpdateAction {
     Create,
     Delete,
 }
@@ -20,13 +20,28 @@ pub enum Action {
 #[derive(Deserialize, ToSchema)]
 pub struct UserRoleForm {
     #[schema(example = json!(Action::Create))]
-    pub action: Action,
+    pub action: RoleUpdateAction,
     pub user_id: uuid::Uuid,
     pub role_id: uuid::Uuid,
 }
 
 /// Fetches all assigned user roles in the scope of the selected theatre ID
-#[utoipa::path(context_path = "/api/v1/theatre/{id}/role")]
+#[utoipa::path(
+    context_path = "/api/v1/theatre/{id}/role",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || UserManager)", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
+        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = OK, description = "The selected theatre was found and the roles were returned (user_id, role_id)", body = HashMap<uuid::Uuid, uuid::Uuid>)
+    ),
+    params(
+        ("id" = uuid::Uuid, description = "Unique storage ID of Theatre")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
 #[get("/all")]
 pub async fn get_all_roles(
     path: web::Path<(uuid::Uuid,)>,
@@ -39,7 +54,7 @@ pub async fn get_all_roles(
     let theatre_id = path.0;
 
     if !user.is_super_user {
-        check_roles!(
+        check_roles_or!(
             [Role::TheatreOwner, Role::UserManager],
             user.id,
             theatre_id,
@@ -58,7 +73,24 @@ pub async fn get_all_roles(
 }
 
 /// Creates/Deletes assigned user roles in the scope of the selected theatre ID
-#[utoipa::path(context_path = "/api/v1/theatre/{id}/role")]
+#[utoipa::path(
+    context_path = "/api/v1/theatre/{id}/role",
+    request_body = Vec<UserRoleForm>,
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || UserManager) or has tried to update its own role", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
+        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = OK, description = "The selected theatre was found and the roles were updated")
+    ),
+    params(
+        ("id" = uuid::Uuid, description = "Unique storage ID of Theatre")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
 #[put("/update")]
 pub async fn update_roles_batch(
     path: web::Path<(uuid::Uuid,)>,
@@ -72,7 +104,7 @@ pub async fn update_roles_batch(
     let theatre_id = path.0;
 
     if !user.is_super_user {
-        check_roles!(
+        check_roles_or!(
             [Role::TheatreOwner, Role::UserManager],
             user.id,
             theatre_id,
@@ -92,12 +124,12 @@ pub async fn update_roles_batch(
 
     for x in batch.iter() {
         match &x.action {
-            Action::Create => ins_roles.push(UserTheatreRole {
+            RoleUpdateAction::Create => ins_roles.push(UserTheatreRole {
                 role_id: x.role_id,
                 user_id: x.user_id,
                 theatre_id,
             }),
-            Action::Delete => del_roles.push(UserTheatreRole {
+            RoleUpdateAction::Delete => del_roles.push(UserTheatreRole {
                 role_id: x.role_id,
                 user_id: x.user_id,
                 theatre_id,

@@ -53,8 +53,7 @@ impl TheatreService {
 
         let theatre = conn
             .interact(move |conn| {
-                diesel::update(theatres)
-                    .filter(id.eq(id_))
+                diesel::update(theatres.filter(id.eq(id_)).filter(is_deleted.eq(false)))
                     .set(theatre)
                     .returning(Theatre::as_returning())
                     .get_result(conn)
@@ -127,8 +126,7 @@ impl TheatreService {
             .get()
             .await?
             .interact(move |conn| {
-                diesel::update(theatres)
-                    .filter(id.eq(id_))
+                diesel::update(theatres.filter(id.eq(id_)).filter(is_deleted.eq(false)))
                     .set(is_deleted.eq(true))
                     .execute(conn)
             })
@@ -188,9 +186,7 @@ impl TheatreResource {
         let conn = self.pool.get().await?;
 
         conn.interact(move |conn| {
-            diesel::update(halls)
-                .filter(is_deleted.eq(false))
-                .filter(id.eq(id_))
+            diesel::update(halls.filter(id.eq(id_)).filter(is_deleted.eq(false)))
                 .set(is_deleted.eq(true))
                 .execute(conn)
         })
@@ -223,9 +219,7 @@ impl TheatreResource {
 
         Ok(conn
             .interact(move |conn| {
-                diesel::update(ticket_types)
-                    .filter(is_deleted.eq(false))
-                    .filter(id.eq(id_))
+                diesel::update(ticket_types.filter(id.eq(id_)).filter(is_deleted.eq(false)))
                     .set(&new_ticket_type)
                     .returning(TicketType::as_returning())
                     .get_result(conn)
@@ -255,9 +249,7 @@ impl TheatreResource {
         let conn = self.pool.get().await?;
 
         conn.interact(move |conn| {
-            diesel::update(ticket_types)
-                .filter(is_deleted.eq(false))
-                .filter(id.eq(id_))
+            diesel::update(ticket_types.filter(id.eq(id_)).filter(is_deleted.eq(false)))
                 .set(is_deleted.eq(true))
                 .execute(conn)
         })
@@ -380,9 +372,7 @@ impl TheatreResource {
 
         Ok(conn
             .interact(move |conn| {
-                diesel::update(theatre_screenings)
-                    .filter(id.eq(id_))
-                    .filter(is_deleted.eq(false))
+                diesel::update(theatre_screenings.filter(id.eq(id_)).filter(is_deleted.eq(false)))
                     .set(new_theatre_screening)
                     .returning(TheatreScreening::as_returning())
                     .get_result(conn)
@@ -396,9 +386,7 @@ impl TheatreResource {
         let conn = self.pool.get().await?;
 
         conn.interact(move |conn| {
-            diesel::update(theatre_screenings)
-                .filter(id.eq(id_))
-                .filter(is_deleted.eq(false))
+            diesel::update(theatre_screenings.filter(id.eq(id_)).filter(is_deleted.eq(false)))
                 .set(is_deleted.eq(true))
                 .execute(conn)
         })

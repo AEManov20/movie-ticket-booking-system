@@ -1,13 +1,14 @@
 use std::sync::Arc;
 
 use chrono::{Datelike, Utc};
+use utoipa::IntoParams;
 use validator::ValidationError;
 
 use crate::model::{FormTheatreScreening, TheatreScreening, TheatreScreeningEvent};
 
 use super::*;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, IntoParams)]
 pub struct TimelineQuery {
     pub start_date: chrono::DateTime<Utc>,
     pub end_date: Option<chrono::DateTime<Utc>>,
@@ -31,14 +32,26 @@ fn validate_timeline_query(query: &TimelineQuery) -> std::result::Result<(), Val
 }
 
 /// Fetches screening events over a given timespan
-#[utoipa::path(context_path = "/api/v1/theatre/{id}/screening")]
+#[utoipa::path(
+    context_path = "/api/v1/theatre/{id}/screening",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = OK, description = "The selected theatre was found and a timeline was returned", body = Vec<TheatreScreeningEvent>)
+    ),
+    params(
+        ("id" = uuid::Uuid, description = "Unique storage ID for Theatre"),
+        TimelineQuery
+    )
+)]
 #[get("/timeline")]
 pub async fn get_timeline(
     path: web::Path<(uuid::Uuid,)>,
-    query: web::Path<TimelineQuery>,
+    query: web::Query<TimelineQuery>,
     theatre_service: web::Data<TheatreService>,
 ) -> Result<Vec<TheatreScreeningEvent>> {
-    validate_timeline_query(query.as_ref())?;
+    let query = query.into_inner();
+    validate_timeline_query(&query)?;
 
     let theatre_id = path.0;
     let Some(theatre_res) = theatre_service.get_by_id(theatre_id).await? else {
@@ -55,7 +68,18 @@ pub async fn get_timeline(
 }
 
 /// Fetches data about a given theatre screening by ID
-#[utoipa::path(context_path = "/api/v1/theatre/{id}/screening")]
+#[utoipa::path(
+    context_path = "/api/v1/theatre/{id}/screening",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = OK, description = "The selected theatre was found and the TheatreScreening resource was returned", body = TheatreScreening)
+    ),
+    params(
+        ("id" = uuid::Uuid, description = "Unique storage ID for Theatre"),
+        ("tsid", description = "Unique storage ID for TheatreScreening")
+    )
+)]
 #[get("/{tsid}")]
 pub async fn get_theatre_screening(
     path: web::Path<(uuid::Uuid, uuid::Uuid)>,
@@ -76,7 +100,25 @@ pub async fn get_theatre_screening(
 }
 
 /// Updates a theatre screening
-#[utoipa::path(context_path = "/api/v1/theatre/{id}/screening")]
+#[utoipa::path(
+    context_path = "/api/v1/theatre/{id}/screening",
+    request_body = FormTheatreScreening,
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || ScreeningsManager)", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
+        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = OK, description = "The selected theatre was found and the TheatreScreening was updated", body = TheatreScreening)
+    ),
+    params(
+        ("id" = uuid::Uuid, description = "Unique storage ID for Theatre"),
+        ("tsid", description = "Unique storage ID for TheatreScreening")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
 #[put("/{tsid}")]
 pub async fn update_theatre_screening(
     path: web::Path<(uuid::Uuid, uuid::Uuid)>,
@@ -87,6 +129,8 @@ pub async fn update_theatre_screening(
     role_service: web::Data<RoleService>,
     claims: JwtClaims,
 ) -> Result<TheatreScreening> {
+    new_theatre_screening.validate()?;
+    
     let (theatre_id, theatre_screening_id) = path.into_inner();
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let Some(theatre_res) = theatre_service.get_by_id(theatre_id).await? else {
@@ -94,7 +138,7 @@ pub async fn update_theatre_screening(
     };
 
     if !user.is_super_user {
-        check_roles!(
+        check_roles_or!(
             [Role::ScreeningsManager],
             user.id,
             theatre_id,
@@ -110,7 +154,23 @@ pub async fn update_theatre_screening(
 }
 
 /// Deletes a theatre screening
-#[utoipa::path(context_path = "/api/v1/theatre/{id}/screening")]
+#[utoipa::path(
+    context_path = "/api/v1/theatre/{id}/screening",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || ScreeningsManager)", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
+        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = OK, description = "The selected theatre was found and the TheatreScreening was deleted")
+    ),
+    params(
+        ("id" = uuid::Uuid, description = "Unique storage ID for Theatre"),
+        ("tsid", description = "Unique storage ID for TheatreScreening")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
 #[delete("/{tsid}")]
 pub async fn delete_theatre_screening(
     path: web::Path<(uuid::Uuid, uuid::Uuid)>,
@@ -127,7 +187,7 @@ pub async fn delete_theatre_screening(
     };
 
     if !user.is_super_user {
-        check_roles!(
+        check_roles_or!(
             [Role::TheatreOwner, Role::ScreeningsManager],
             user.id,
             theatre_id,
@@ -143,7 +203,20 @@ pub async fn delete_theatre_screening(
 }
 
 /// Creates a new theatre screening
-#[utoipa::path(context_path = "/api/v1/theatre/{id}/screening")]
+#[utoipa::path(
+    context_path = "/api/v1/theatre/{id}/screening",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || ScreeningsManager)", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
+        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = OK, description = "The selected theatre was found and new TheatreScreening was created", body = TheatreScreening)
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
 #[post("/new")]
 pub async fn create_theatre_screening(
     path: web::Path<uuid::Uuid>,
@@ -161,7 +234,7 @@ pub async fn create_theatre_screening(
     };
 
     if !user.is_super_user {
-        check_roles!(
+        check_roles_or!(
             [Role::TheatreOwner, Role::ScreeningsManager],
             user.id,
             theatre_id,

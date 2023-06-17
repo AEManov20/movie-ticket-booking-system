@@ -1,5 +1,5 @@
 use crate::{
-    check_roles, doc,
+    check_roles_or, doc,
     model::{FormTheatre, Role, Theatre},
     services::{bridge_role::*, role::*, theatre::*},
 };
@@ -12,13 +12,18 @@ pub mod screening;
 pub mod ticket;
 pub mod ticket_type;
 
+/// Creates a new theatre (superuser only)
 #[utoipa::path(
     context_path = "/api/v1/theatre",
+    request_body = FormTheatre,
     responses(
         (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
         (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
         (status = FORBIDDEN, description = "User doesn't meet the required permissions", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
         (status = OK, description = "A new theatre was successfully created", body = Theatre)
+    ),
+    security(
+        ("api_key" = [])
     )
 )]
 #[post("/new")]
@@ -37,7 +42,15 @@ pub async fn new_theatre(
     Ok(Theatre::from(theatre_service.create(theatre.into_inner()).await?).into())
 }
 
-#[utoipa::path(context_path = "/api/v1/theatre")]
+/// Gets data about a theatre
+#[utoipa::path(
+    context_path = "/api/v1/theatre",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = NOT_FOUND, description = "Occurs when given ID wasn't found in the database", body = DocError, example = json!(doc!(ErrorType::NotFound))),
+        (status = OK, description = "Resource was found and returned", body = Theatre)
+    )
+)]
 #[get("/{id}")]
 pub async fn get_theatre(
     path: web::Path<(uuid::Uuid,)>,
@@ -49,7 +62,22 @@ pub async fn get_theatre(
     }
 }
 
-#[utoipa::path(context_path = "/api/v1/theatre")]
+/// Updates a theatre (superuser only)
+#[utoipa::path(
+    context_path = "/api/v1/theatre",
+    request_body = FormTheatre,
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
+        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = OK, description = "The selected theatre was successfully updated", body = Theatre)
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
 #[put("/{id}")]
 pub async fn update_theatre(
     path: web::Path<(uuid::Uuid,)>,
@@ -60,11 +88,13 @@ pub async fn update_theatre(
     user_service: web::Data<UserService>,
     claims: JwtClaims,
 ) -> Result<Theatre> {
+    form.validate()?;
+
     let theatre_id = path.0;
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
 
     if !user.is_super_user {
-        check_roles!(
+        check_roles_or!(
             [Role::TheatreOwner],
             user.id,
             theatre_id,
@@ -81,7 +111,20 @@ pub async fn update_theatre(
     .into())
 }
 
-#[utoipa::path(context_path = "/api/v1/theatre")]
+/// Deletes a theatre (superuser only)
+#[utoipa::path(
+    context_path = "/api/v1/theatre",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
+        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = OK, description = "The selected theatre was successfully updated", body = Theatre)
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
 #[delete("/{id}")]
 pub async fn delete_theatre(
     path: web::Path<(uuid::Uuid,)>,

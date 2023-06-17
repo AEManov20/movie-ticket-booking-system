@@ -89,9 +89,7 @@ impl MovieService {
             .get()
             .await?
             .interact(move |conn| {
-                diesel::update(movies)
-                    .filter(is_deleted.eq(false))
-                    .filter(id.eq(id_))
+                diesel::update(movies.filter(id.eq(id_)).filter(is_deleted.eq(false)))
                     .set(is_deleted.eq(true))
                     .execute(conn)
             })
