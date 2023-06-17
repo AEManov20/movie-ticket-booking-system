@@ -8,8 +8,9 @@ pub mod language;
 use argon2::password_hash;
 use deadpool_diesel::{InteractError, PoolError};
 use serde::Deserialize;
+use utoipa::{IntoParams, ToSchema};
 
-#[derive(Deserialize, Copy, Clone)]
+#[derive(Deserialize, Copy, Clone, ToSchema)]
 pub enum SortBy {
     Newest,
     Oldest,

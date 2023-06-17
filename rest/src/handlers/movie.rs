@@ -1,13 +1,14 @@
-use utoipa::ToSchema;
+use utoipa::{ToSchema, IntoParams};
 
 use super::*;
 
 use crate::{
     model::{FormMovie, FormMovieReview, JwtClaims, Movie, MovieReview, Theatre},
     services::{movie::MovieService, user::UserService, SortBy},
+    doc
 };
 
-#[derive(Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema, IntoParams)]
 pub struct MovieQuery {
     #[validate(length(min = 1, max = 250))]
     pub name: Option<String>,
@@ -17,7 +18,7 @@ pub struct MovieQuery {
     pub offset: i64,
 }
 
-#[derive(Deserialize, Validate, ToSchema)]
+#[derive(Deserialize, Validate, ToSchema, IntoParams)]
 pub struct MovieReviewQuery {
     #[validate(range(min = 1, max = 100))]
     pub limit: i64,
@@ -26,7 +27,19 @@ pub struct MovieReviewQuery {
 }
 
 /// Creates a new review for a given movie
-#[utoipa::path(context_path = "/api/v1/movie")]
+#[utoipa::path(
+    context_path = "/api/v1/movie",
+    request_body = FormMovieReview,
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
+        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = OK, description = "Review created successfully and returned", body = MovieReview),
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
 #[post("/review/new")]
 pub async fn submit_new_review(
     new_review: web::Json<FormMovieReview>,
@@ -44,7 +57,14 @@ pub async fn submit_new_review(
 }
 
 /// Gets a review by ID
-#[utoipa::path(context_path = "/api/v1/movie")]
+#[utoipa::path(
+    context_path = "/api/v1/movie",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = NOT_FOUND, description = "The selected review was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = OK, description = "MovieReview found and returned", body = MovieReview),
+    )
+)]
 #[get("/review/{id}")]
 pub async fn get_review_by_id(
     path: web::Path<(uuid::Uuid,)>,
@@ -57,7 +77,19 @@ pub async fn get_review_by_id(
 }
 
 /// Deletes a review by ID given that the user has ownership/permission
-#[utoipa::path(context_path = "/api/v1/movie")]
+#[utoipa::path(
+    context_path = "/api/v1/movie",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
+        (status = NOT_FOUND, description = "The selected review was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = OK, description = "Review deleted successfully")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
 #[delete("/review/{id}")]
 pub async fn delete_review_by_id(
     path: web::Path<(uuid::Uuid,)>,
@@ -80,7 +112,17 @@ pub async fn delete_review_by_id(
 }
 
 /// Queries reviews for a given movie
-#[utoipa::path(context_path = "/api/v1/movie")]
+#[utoipa::path(
+    context_path = "/api/v1/movie",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = OK, description = "Review query completed successfully and returned", body = Vec<MovieReview>)
+    ),
+    params(
+        MovieReviewQuery
+    )
+)]
 #[get("/{id}/reviews")]
 pub async fn get_reviews(
     path: web::Path<(uuid::Uuid,)>,
@@ -96,7 +138,12 @@ pub async fn get_reviews(
 }
 
 /// Gets theatres where movie is screened
-#[utoipa::path(context_path = "/api/v1/movie")]
+#[utoipa::path(
+    context_path = "/api/v1/movie",
+    // responses(
+    //     (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+    // )
+)]
 #[get("/{id}/theatres")]
 pub async fn get_theatres_by_movie_id(
     path: web::Path<(uuid::Uuid,)>,
@@ -106,7 +153,17 @@ pub async fn get_theatres_by_movie_id(
 }
 
 /// Queries movies given certain criteria
-#[utoipa::path(context_path = "/api/v1/movie")]
+#[utoipa::path(
+    context_path = "/api/v1/movie",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = OK, description = "Movie query completed successfully and returned results", body = Vec<Movie>)
+    ),
+    params(
+        MovieQuery
+    )
+)]
 #[get("/query")]
 pub async fn query_movies(
     query: web::Query<MovieQuery>,
@@ -121,7 +178,14 @@ pub async fn query_movies(
 }
 
 /// Gets a movie by ID
-#[utoipa::path(context_path = "/api/v1/movie")]
+#[utoipa::path(
+    context_path = "/api/v1/movie",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = NOT_FOUND, description = "The selected movie was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = OK, description = "Movie found and returned", body = Movie)
+    )
+)]
 #[get("/{id}")]
 pub async fn get_movie_by_id(
     path: web::Path<(uuid::Uuid,)>,
@@ -140,7 +204,19 @@ pub async fn get_movie_by_id(
 }
 
 /// Deletes a movie by ID (superuser only)
-#[utoipa::path(context_path = "/api/v1/movie")]
+#[utoipa::path(
+    context_path = "/api/v1/movie",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
+        (status = NOT_FOUND, description = "The selected movie was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = OK, description = "Movie found and deleted successfully")
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
 #[delete("/{id}")]
 pub async fn delete_movie_by_id(
     path: web::Path<(uuid::Uuid,)>,
@@ -158,7 +234,20 @@ pub async fn delete_movie_by_id(
 }
 
 /// Creates a new movie (superuser only)
-#[utoipa::path(context_path = "/api/v1/movie")]
+#[utoipa::path(
+    context_path = "/api/v1/movie",
+    request_body = FormMovie,
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
+        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = OK, description = "Movie created successfully and returned", body = Movie)
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
 #[post("/new")]
 pub async fn create_movie(
     movie: web::Json<FormMovie>,
