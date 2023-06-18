@@ -17,9 +17,9 @@ pub mod ticket_type;
     context_path = "/api/v1/theatre",
     request_body = FormTheatre,
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
-        (status = FORBIDDEN, description = "User doesn't meet the required permissions", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions"),
         (status = OK, description = "A new theatre was successfully created", body = Theatre)
     ),
     security(
@@ -46,8 +46,8 @@ pub async fn new_theatre(
 #[utoipa::path(
     context_path = "/api/v1/theatre",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = NOT_FOUND, description = "Occurs when given ID wasn't found in the database", body = DocError, example = json!(doc!(ErrorType::NotFound))),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = NOT_FOUND, description = "Occurs when given ID wasn't found in the database"),
         (status = OK, description = "Resource was found and returned", body = Theatre)
     )
 )]
@@ -67,11 +67,11 @@ pub async fn get_theatre(
     context_path = "/api/v1/theatre",
     request_body = FormTheatre,
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
-        (status = FORBIDDEN, description = "User doesn't meet the required permissions", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
-        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions"),
+        (status = NOT_FOUND, description = "The selected theatre was not found"),
+        (status = BAD_REQUEST, description = "Invalid data supplied"),
         (status = OK, description = "The selected theatre was successfully updated", body = Theatre)
     ),
     security(
@@ -115,10 +115,10 @@ pub async fn update_theatre(
 #[utoipa::path(
     context_path = "/api/v1/theatre",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
-        (status = FORBIDDEN, description = "User doesn't meet the required permissions", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
-        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions"),
+        (status = NOT_FOUND, description = "The selected theatre was not found"),
         (status = OK, description = "The selected theatre was successfully updated", body = Theatre)
     ),
     security(

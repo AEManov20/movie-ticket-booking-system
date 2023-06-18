@@ -152,15 +152,3 @@ impl ResponseError for ErrorType {
         }
     }
 }
-
-#[derive(ToSchema, Serialize)]
-pub struct DocError {
-    pub error: ErrorType,
-}
-
-#[macro_export]
-macro_rules! doc {
-    ($err:expr) => {
-        DocError { error: $err }
-    };
-}

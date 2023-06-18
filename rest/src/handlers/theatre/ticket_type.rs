@@ -6,8 +6,8 @@ use super::*;
 #[utoipa::path(
     context_path = "/api/v1/theatre/{id}/ticket_type",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = NOT_FOUND, description = "The selected theatre was not found"),
         (status = OK, description = "The selected theatre was found and the TicketTypes were returned", body = Vec<TicketType>)
     ),
     params(
@@ -31,11 +31,11 @@ pub async fn get_all_ticket_types(
     context_path = "/api/v1/theatre/{id}/ticket_type",
     request_body = FormTicketType,
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
-        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || TicketManager)", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
-        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || TicketManager)"),
+        (status = NOT_FOUND, description = "The selected theatre was not found"),
+        (status = BAD_REQUEST, description = "Invalid data supplied"),
         (status = OK, description = "The selected theatre was found and new TicketType was created")
     ),
     security(
@@ -78,10 +78,10 @@ pub async fn create_ticket_type(
 #[utoipa::path(
     context_path = "/api/v1/theatre/{id}/ticket_type",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
-        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || TicketManager)", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
-        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || TicketManager)"),
+        (status = NOT_FOUND, description = "The selected theatre was not found"),
         (status = OK, description = "The selected theatre was found and new TicketType was created")
     ),
     params(

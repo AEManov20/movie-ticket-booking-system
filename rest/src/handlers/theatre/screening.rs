@@ -35,8 +35,8 @@ fn validate_timeline_query(query: &TimelineQuery) -> std::result::Result<(), Val
 #[utoipa::path(
     context_path = "/api/v1/theatre/{id}/screening",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = NOT_FOUND, description = "The selected theatre was not found"),
         (status = OK, description = "The selected theatre was found and a timeline was returned", body = Vec<TheatreScreeningEvent>)
     ),
     params(
@@ -71,8 +71,8 @@ pub async fn get_timeline(
 #[utoipa::path(
     context_path = "/api/v1/theatre/{id}/screening",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = NOT_FOUND, description = "The selected theatre was not found"),
         (status = OK, description = "The selected theatre was found and the TheatreScreening resource was returned", body = TheatreScreening)
     ),
     params(
@@ -104,11 +104,11 @@ pub async fn get_theatre_screening(
     context_path = "/api/v1/theatre/{id}/screening",
     request_body = FormTheatreScreening,
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
-        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || ScreeningsManager)", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
-        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || ScreeningsManager)"),
+        (status = NOT_FOUND, description = "The selected theatre was not found"),
+        (status = BAD_REQUEST, description = "Invalid data supplied"),
         (status = OK, description = "The selected theatre was found and the TheatreScreening was updated", body = TheatreScreening)
     ),
     params(
@@ -157,10 +157,10 @@ pub async fn update_theatre_screening(
 #[utoipa::path(
     context_path = "/api/v1/theatre/{id}/screening",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
-        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || ScreeningsManager)", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
-        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || ScreeningsManager)"),
+        (status = NOT_FOUND, description = "The selected theatre was not found"),
         (status = OK, description = "The selected theatre was found and the TheatreScreening was deleted")
     ),
     params(
@@ -206,11 +206,11 @@ pub async fn delete_theatre_screening(
 #[utoipa::path(
     context_path = "/api/v1/theatre/{id}/screening",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
-        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || ScreeningsManager)", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
-        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || ScreeningsManager)"),
+        (status = NOT_FOUND, description = "The selected theatre was not found"),
+        (status = BAD_REQUEST, description = "Invalid data supplied"),
         (status = OK, description = "The selected theatre was found and new TheatreScreening was created", body = TheatreScreening)
     ),
     security(

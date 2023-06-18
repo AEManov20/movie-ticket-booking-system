@@ -298,14 +298,8 @@ impl UserResource {
             }
         }
 
-        let Some(ref hash) = self.user.password_hash else {
-            let res = conn.interact(move |conn| insert_password(user.id, new_password.as_bytes(), conn)).await??;
-            self.user.password_hash = res.password_hash;
-            return Ok(())
-        };
-
-        conn.interact(move |conn| insert_password(user.id, new_password.as_bytes(), conn))
-            .await??;
+        let res = conn.interact(move |conn| insert_password(user.id, new_password.as_bytes(), conn)).await??;
+        self.user.password_hash = res.password_hash;
         Ok(())
     }
 
@@ -374,12 +368,8 @@ impl UserResource {
                 MovieReview::belonging_to(&cloned_user)
                     .inner_join(movies::table)
                     .select((
-                        movie_reviews::id,
                         PartialMovie::as_select(),
-                        movie_reviews::content,
-                        movie_reviews::rating,
-                        movie_reviews::created_at,
-                        movie_reviews::votes,
+                        PartialMovieReview::as_select(),
                     ))
                     .load(conn)
             })

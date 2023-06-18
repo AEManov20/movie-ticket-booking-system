@@ -6,8 +6,8 @@ use super::*;
 #[utoipa::path(
     context_path = "/api/v1/theatre/{id}/hall",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = NOT_FOUND, description = "The selected theatre was not found"),
         (status = OK, description = "The selected theatre was found and its halls were returned", body = Vec<Hall>)
     ),
     params(
@@ -38,11 +38,11 @@ pub async fn get_halls(
     context_path = "/api/v1/theatre/{id}/hall",
     request_body = FormHall,
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
-        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner)", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
-        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner)"),
+        (status = NOT_FOUND, description = "The selected theatre was not found"),
+        (status = BAD_REQUEST, description = "Invalid data supplied"),
         (status = OK, description = "The selected theatre was found and the hall was created and returned", body = Hall)
     ),
     params(
@@ -88,10 +88,10 @@ pub async fn create_hall(
 #[utoipa::path(
     context_path = "/api/v1/theatre/{id}/hall",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
-        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner)", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
-        (status = NOT_FOUND, description = "The selected theatre was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner)"),
+        (status = NOT_FOUND, description = "The selected theatre was not found"),
         (status = OK, description = "The selected theatre was found and the hall was created and returned", body = Hall)
     ),
     params(

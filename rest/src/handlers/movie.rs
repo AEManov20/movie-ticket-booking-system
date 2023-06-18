@@ -31,9 +31,9 @@ pub struct MovieReviewQuery {
     context_path = "/api/v1/movie",
     request_body = FormMovieReview,
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
-        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
+        (status = BAD_REQUEST, description = "Invalid data supplied"),
         (status = OK, description = "Review created successfully and returned", body = MovieReview),
     ),
     security(
@@ -60,8 +60,8 @@ pub async fn submit_new_review(
 #[utoipa::path(
     context_path = "/api/v1/movie",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = NOT_FOUND, description = "The selected review was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = NOT_FOUND, description = "The selected review was not found"),
         (status = OK, description = "MovieReview found and returned", body = MovieReview),
     )
 )]
@@ -80,10 +80,10 @@ pub async fn get_review_by_id(
 #[utoipa::path(
     context_path = "/api/v1/movie",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
-        (status = FORBIDDEN, description = "User doesn't meet the required permissions", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
-        (status = NOT_FOUND, description = "The selected review was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions"),
+        (status = NOT_FOUND, description = "The selected review was not found"),
         (status = OK, description = "Review deleted successfully")
     ),
     security(
@@ -115,8 +115,8 @@ pub async fn delete_review_by_id(
 #[utoipa::path(
     context_path = "/api/v1/movie",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = BAD_REQUEST, description = "Invalid data supplied"),
         (status = OK, description = "Review query completed successfully and returned", body = Vec<MovieReview>)
     ),
     params(
@@ -141,7 +141,7 @@ pub async fn get_reviews(
 #[utoipa::path(
     context_path = "/api/v1/movie",
     // responses(
-    //     (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+    //     (status = "5XX", description = "Internal server error has occurred (database/misc)"),
     // )
 )]
 #[get("/{id}/theatres")]
@@ -156,8 +156,8 @@ pub async fn get_theatres_by_movie_id(
 #[utoipa::path(
     context_path = "/api/v1/movie",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = BAD_REQUEST, description = "Invalid data supplied"),
         (status = OK, description = "Movie query completed successfully and returned results", body = Vec<Movie>)
     ),
     params(
@@ -181,8 +181,8 @@ pub async fn query_movies(
 #[utoipa::path(
     context_path = "/api/v1/movie",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = NOT_FOUND, description = "The selected movie was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = NOT_FOUND, description = "The selected movie was not found"),
         (status = OK, description = "Movie found and returned", body = Movie)
     )
 )]
@@ -207,10 +207,10 @@ pub async fn get_movie_by_id(
 #[utoipa::path(
     context_path = "/api/v1/movie",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
-        (status = FORBIDDEN, description = "User doesn't meet the required permissions", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
-        (status = NOT_FOUND, description = "The selected movie was not found", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions"),
+        (status = NOT_FOUND, description = "The selected movie was not found"),
         (status = OK, description = "Movie found and deleted successfully")
     ),
     security(
@@ -238,10 +238,10 @@ pub async fn delete_movie_by_id(
     context_path = "/api/v1/movie",
     request_body = FormMovie,
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
-        (status = FORBIDDEN, description = "User doesn't meet the required permissions", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
-        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions"),
+        (status = BAD_REQUEST, description = "Invalid data supplied"),
         (status = OK, description = "Movie created successfully and returned", body = Movie)
     ),
     security(

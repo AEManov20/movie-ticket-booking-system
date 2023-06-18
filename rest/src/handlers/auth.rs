@@ -20,10 +20,10 @@ pub struct EmailVerificationQuery {
 #[utoipa::path(
     context_path = "/api/v1/auth",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
-        (status = UNAUTHORIZED, description = "Email is not verified", body = DocError),
-        (status = CONFLICT, description = "User isn't registered with a password but rather with an external provider", body = DocError),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = BAD_REQUEST, description = "Invalid data supplied"),
+        (status = UNAUTHORIZED, description = "Email is not verified"),
+        (status = CONFLICT, description = "User isn't registered with a password but rather with an external provider"),
         (status = OK, description = "User successfully logged in and auth key returned", body = LoginResponse)
     ),
     params(
@@ -63,9 +63,9 @@ pub async fn login_user(
     context_path = "/api/v1/auth",
     request_body = FormUser,
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
-        (status = CONFLICT, description = "User already registered", body = DocError),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = BAD_REQUEST, description = "Invalid data supplied"),
+        (status = CONFLICT, description = "User already registered"),
         (status = OK, description = "User successfully registered", body = LoginResponse)
     )
 )]
@@ -94,9 +94,9 @@ pub async fn register_user(
 #[utoipa::path(
     context_path = "/api/v1/auth",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = UNAUTHORIZED, description = "Email verification token has expired", body = DocError),
-        (status = BAD_REQUEST, description = "Invalid data supplied", body = DocError),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "Email verification token has expired"),
+        (status = BAD_REQUEST, description = "Invalid data supplied"),
     ),
     params(
         EmailVerificationQuery

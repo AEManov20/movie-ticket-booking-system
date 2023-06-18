@@ -146,12 +146,8 @@ impl MovieService {
                     .filter(movie_reviews::movie_id.eq(movie_id_))
                     .limit(limit)
                     .select((
-                        movie_reviews::id,
                         PartialUser::as_select(),
-                        movie_reviews::content,
-                        movie_reviews::rating,
-                        movie_reviews::created_at,
-                        movie_reviews::votes,
+                        PartialMovieReview::as_select(),
                     ))
                     .offset(offset);
 

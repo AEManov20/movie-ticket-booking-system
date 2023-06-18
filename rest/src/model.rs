@@ -4,15 +4,17 @@ use chrono::Utc;
 use diesel::prelude::*;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
-use utoipa::{ToSchema, ToResponse, IntoParams};
 use std::future::{ready, Ready};
+use utoipa::{IntoParams, ToResponse, ToSchema};
 use validator::Validate;
 
 use crate::schema::*;
 use crate::util::JWT_ALGO;
 use crate::vars::jwt_user_secret;
 
-#[derive(Selectable, Identifiable, Queryable, Debug, Serialize, Deserialize, Clone, AsChangeset, ToSchema)]
+#[derive(
+    Selectable, Identifiable, Queryable, Debug, Serialize, Deserialize, Clone, AsChangeset, ToSchema,
+)]
 pub struct User {
     pub id: uuid::Uuid,
     pub first_name: String,
@@ -22,8 +24,8 @@ pub struct User {
     #[serde(skip)]
     pub password_hash: Option<String>,
     pub created_at: chrono::NaiveDateTime,
-    #[serde(skip)]
     pub is_super_user: bool,
+    #[serde(skip)]
     pub is_activated: bool,
     #[serde(skip)]
     pub is_deleted: bool,
@@ -35,7 +37,8 @@ pub struct PartialUser {
     pub id: uuid::Uuid,
     pub first_name: String,
     pub last_name: String,
-    pub username: String
+    pub username: String,
+    pub is_super_user: bool
 }
 
 #[derive(Deserialize, Debug, Clone, Validate, ToSchema, IntoParams)]
@@ -65,7 +68,9 @@ pub struct LoginUser {
     pub password: String,
 }
 
-#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations)]
+#[derive(
+    Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations,
+)]
 #[diesel(belongs_to(User, foreign_key = owner_user_id))]
 #[diesel(belongs_to(TheatreScreening))]
 #[diesel(belongs_to(TicketType))]
@@ -101,7 +106,17 @@ pub struct CreateTicket {
     pub seat_column: i32,
 }
 
-#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations, ToSchema)]
+#[derive(
+    Selectable,
+    Identifiable,
+    Queryable,
+    Serialize,
+    Debug,
+    Clone,
+    AsChangeset,
+    Associations,
+    ToSchema,
+)]
 #[diesel(belongs_to(Hall))]
 #[diesel(belongs_to(Movie))]
 #[diesel(belongs_to(Theatre))]
@@ -140,7 +155,17 @@ pub struct TheatreScreeningEvent {
     pub movie_name: String,
 }
 
-#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations, ToSchema)]
+#[derive(
+    Selectable,
+    Identifiable,
+    Queryable,
+    Serialize,
+    Debug,
+    Clone,
+    AsChangeset,
+    Associations,
+    ToSchema,
+)]
 #[diesel(belongs_to(Theatre))]
 pub struct Hall {
     pub id: uuid::Uuid,
@@ -148,7 +173,7 @@ pub struct Hall {
     pub name: String,
     pub seat_data: serde_json::Value,
     #[serde(skip)]
-    pub is_deleted: bool
+    pub is_deleted: bool,
 }
 
 #[derive(Insertable, Deserialize, AsChangeset, Validate, ToSchema)]
@@ -227,7 +252,17 @@ pub struct FormMovie {
     pub imdb_link: Option<String>,
 }
 
-#[derive(Selectable, Identifiable, Associations, Queryable, Serialize, Debug, Clone, AsChangeset, ToSchema)]
+#[derive(
+    Selectable,
+    Identifiable,
+    Associations,
+    Queryable,
+    Serialize,
+    Debug,
+    Clone,
+    AsChangeset,
+    ToSchema,
+)]
 #[diesel(belongs_to(User, foreign_key = author_user_id))]
 #[diesel(belongs_to(Movie))]
 pub struct MovieReview {
@@ -240,26 +275,28 @@ pub struct MovieReview {
     pub votes: i32,
 }
 
-#[derive(Identifiable, Serialize, Queryable, ToSchema)]
+#[derive(Selectable, Identifiable, Queryable, Debug, Serialize, Clone, AsChangeset, ToSchema)]
 #[diesel(table_name = movie_reviews)]
-pub struct ExtendedUserReview {
+pub struct PartialMovieReview {
     pub id: uuid::Uuid,
-    pub author: PartialUser,
     pub content: Option<String>,
     pub rating: f64,
     pub created_at: chrono::NaiveDateTime,
     pub votes: i32,
 }
 
-#[derive(Identifiable, Serialize, Queryable, ToSchema)]
+#[derive(Serialize, Queryable, ToSchema)]
+#[diesel(table_name = movie_reviews)]
+pub struct ExtendedUserReview {
+    user: PartialUser,
+    review: PartialMovieReview,
+}
+
+#[derive(Serialize, Queryable, ToSchema)]
 #[diesel(table_name = movie_reviews)]
 pub struct ExtendedMovieReview {
-    pub id: uuid::Uuid,
-    pub movie: PartialMovie,
-    pub content: Option<String>,
-    pub rating: f64,
-    pub created_at: chrono::NaiveDateTime,
-    pub votes: i32,
+    movie: PartialMovie,
+    review: PartialMovieReview,
 }
 
 #[derive(Insertable, Deserialize, AsChangeset)]
@@ -282,7 +319,17 @@ pub struct FormMovieReview {
     pub rating: f64,
 }
 
-#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations, ToSchema)]
+#[derive(
+    Selectable,
+    Identifiable,
+    Queryable,
+    Serialize,
+    Debug,
+    Clone,
+    AsChangeset,
+    Associations,
+    ToSchema,
+)]
 #[diesel(belongs_to(Theatre))]
 pub struct TicketType {
     pub id: uuid::Uuid,
@@ -294,10 +341,21 @@ pub struct TicketType {
     pub currency: String,
     pub price: f64,
     #[serde(skip)]
-    pub is_deleted: bool
+    pub is_deleted: bool,
 }
 
-#[derive(Selectable, Identifiable, Insertable, Queryable, Serialize, Deserialize, Debug, Clone, Associations, ToSchema)]
+#[derive(
+    Selectable,
+    Identifiable,
+    Insertable,
+    Queryable,
+    Serialize,
+    Deserialize,
+    Debug,
+    Clone,
+    Associations,
+    ToSchema,
+)]
 #[diesel(belongs_to(User))]
 #[diesel(belongs_to(Theatre))]
 #[diesel(belongs_to(TheatreRole, foreign_key = role_id))]
@@ -312,7 +370,7 @@ pub struct UserTheatreRole {
 #[derive(Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset)]
 pub struct TheatreRole {
     pub id: uuid::Uuid,
-    pub name: String
+    pub name: String,
 }
 
 #[derive(Debug)]
@@ -321,7 +379,7 @@ pub enum Role {
     TicketManager,
     TicketChecker,
     UserManager,
-    ScreeningsManager
+    ScreeningsManager,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -343,11 +401,13 @@ pub struct JwtClaims {
     pub exp: i64,
 }
 
-#[derive(Selectable, Identifiable, Insertable, Queryable, Serialize, Deserialize, Debug, Clone, ToSchema)]
+#[derive(
+    Selectable, Identifiable, Insertable, Queryable, Serialize, Deserialize, Debug, Clone, ToSchema,
+)]
 pub struct Language {
     pub id: uuid::Uuid,
     pub code: String,
-    pub name: String
+    pub name: String,
 }
 
 #[derive(Insertable, Deserialize, AsChangeset, ToSchema)]
@@ -370,7 +430,7 @@ impl Role {
             "TicketChecker" => Some(Role::TicketChecker),
             "ScreeningsManager" => Some(Role::ScreeningsManager),
             "UserManager" => Some(Role::UserManager),
-            _ => None
+            _ => None,
         }
     }
 }
@@ -416,5 +476,17 @@ impl FromRequest for JwtClaims {
                 Err(_) => Err(ErrorType::NoAuth),
             },
         )
+    }
+}
+
+impl From<User> for PartialUser {
+    fn from(value: User) -> Self {
+        PartialUser {
+            id: value.id,
+            first_name: value.first_name,
+            last_name: value.last_name,
+            username: value.username,
+            is_super_user: value.is_super_user
+        }
     }
 }

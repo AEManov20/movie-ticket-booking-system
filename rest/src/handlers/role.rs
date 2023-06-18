@@ -22,7 +22,7 @@ pub struct BridgeRoleQuery {
 #[utoipa::path(
     context_path = "/api/v1/role",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
         (status = OK, description = "Database operations completed successfully and roles were returned", body = HashMap<String, uuid::Uuid>),
     )
 )]
@@ -43,9 +43,9 @@ pub async fn get_all_roles(
 #[utoipa::path(
     context_path = "/api/v1/role",
     responses(
-        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
-        (status = UNAUTHORIZED, description = "User hasn't authenticated yet", body = DocError, example = json!(doc!(ErrorType::NoAuth))),
-        (status = FORBIDDEN, description = "User doesn't meet the required permissions", body = DocError, example = json!(doc!(ErrorType::InsufficientPermission))),
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions"),
         (status = OK, description = "Query completed successfully and returned", body = Vec<UserTheatreRole>)
     )
 )]
