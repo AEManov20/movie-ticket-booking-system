@@ -41,6 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         (Url::new("movie.json", "/api-docs/movie.json"), doc::MovieApiDoc::openapi()),
         (Url::new("language.json", "/api-docs/language.json"), doc::LanguageApiDoc::openapi()),
         (Url::new("auth.json", "/api-docs/auth.json"), doc::AuthApiDoc::openapi()),
+        (Url::new("user.json", "/api-docs/user.json"), doc::UserApiDoc::openapi())
     ];
 
     HttpServer::new(move || {

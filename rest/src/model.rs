@@ -38,7 +38,7 @@ pub struct PartialUser {
     pub first_name: String,
     pub last_name: String,
     pub username: String,
-    pub is_super_user: bool
+    pub is_super_user: bool,
 }
 
 #[derive(Deserialize, Debug, Clone, Validate, ToSchema, IntoParams)]
@@ -60,6 +60,23 @@ pub struct FormUser {
     pub password: String,
 }
 
+#[derive(Deserialize, AsChangeset, Debug, Clone, Validate, ToSchema, IntoParams)]
+#[diesel(table_name = users)]
+pub struct UpdateUser {
+    #[schema(example = "John")]
+    #[validate(length(min = 1, max = 50))]
+    pub first_name: String,
+    #[schema(example = "Doe")]
+    #[validate(length(min = 1, max = 50))]
+    pub last_name: String,
+    #[schema(example = "john.doe@example.com")]
+    #[validate(email, length(max = 150))]
+    pub email: String,
+    #[schema(example = "john.doe")]
+    #[validate(length(min = 8, max = 50))]
+    pub username: String,
+}
+
 #[derive(Deserialize, Debug, Clone, Validate, IntoParams, ToSchema)]
 pub struct LoginUser {
     #[validate(length(min = 1))]
@@ -69,7 +86,15 @@ pub struct LoginUser {
 }
 
 #[derive(
-    Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, Associations,
+    Selectable,
+    Identifiable,
+    Queryable,
+    Serialize,
+    Debug,
+    Clone,
+    AsChangeset,
+    Associations,
+    ToSchema,
 )]
 #[diesel(belongs_to(User, foreign_key = owner_user_id))]
 #[diesel(belongs_to(TheatreScreening))]
@@ -138,7 +163,6 @@ pub struct TheatreScreening {
 #[diesel(table_name = theatre_screenings)]
 pub struct FormTheatreScreening {
     pub movie_id: uuid::Uuid,
-    pub theatre_id: uuid::Uuid,
     pub hall_id: uuid::Uuid,
     pub subtitles_language_id: Option<uuid::Uuid>,
     pub audio_language_id: uuid::Uuid,
@@ -149,7 +173,7 @@ pub struct FormTheatreScreening {
 #[derive(Serialize, Queryable, ToSchema)]
 pub struct TheatreScreeningEvent {
     pub movie_id: uuid::Uuid,
-    pub theatre_movie_id: uuid::Uuid,
+    pub theatre_screening_id: uuid::Uuid,
     pub starting_time: chrono::NaiveDateTime,
     pub length: f64,
     pub movie_name: String,
@@ -486,7 +510,7 @@ impl From<User> for PartialUser {
             first_name: value.first_name,
             last_name: value.last_name,
             username: value.username,
-            is_super_user: value.is_super_user
+            is_super_user: value.is_super_user,
         }
     }
 }

@@ -36,7 +36,7 @@ pub async fn get_all_ticket_types(
         (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || TicketManager)"),
         (status = NOT_FOUND, description = "The selected theatre was not found"),
         (status = BAD_REQUEST, description = "Invalid data supplied"),
-        (status = OK, description = "The selected theatre was found and new TicketType was created")
+        (status = OK, description = "The selected theatre was found and new TicketType was created", body = TicketType)
     ),
     security(
         ("api_key" = [])
@@ -82,7 +82,7 @@ pub async fn create_ticket_type(
         (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
         (status = FORBIDDEN, description = "User doesn't meet the required permissions (in this case TheatreOwner || TicketManager)"),
         (status = NOT_FOUND, description = "The selected theatre was not found"),
-        (status = OK, description = "The selected theatre was found and new TicketType was created")
+        (status = OK, description = "The selected theatre was found and the TicketType was deleted")
     ),
     params(
         ("id" = uuid::Uuid, description = "Unique storage ID for Theatre"),

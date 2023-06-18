@@ -205,6 +205,7 @@ pub async fn delete_theatre_screening(
 /// Creates a new theatre screening
 #[utoipa::path(
     context_path = "/api/v1/theatre/{id}/screening",
+    request_body = FormTheatreScreening,
     responses(
         (status = "5XX", description = "Internal server error has occurred (database/misc)"),
         (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),

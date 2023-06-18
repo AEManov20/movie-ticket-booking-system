@@ -1,6 +1,6 @@
 use utoipa::IntoParams;
 
-use crate::model::{ExtendedMovieReview, ExtendedUserReview, MovieReview, PartialUser, Ticket};
+use crate::model::{ExtendedMovieReview, ExtendedUserReview, MovieReview, PartialUser, Ticket, FormUser, UpdateUser};
 
 use super::*;
 
@@ -11,6 +11,7 @@ pub struct NewPasswordForm {
     pub new_password_repeat: String,
 }
 
+/// Fetch information about the logged in user
 #[utoipa::path(
     context_path = "/api/v1/user",
     responses(
@@ -32,6 +33,31 @@ pub async fn get_self_user(
     Ok(user.into())
 }
 
+/// Update information about logged in user
+#[utoipa::path(
+    context_path = "/api/v1/user",
+    request_body = UpdateUser,
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
+        (status = OK, description = "User found and returned", body = User)
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+#[put("/@me")]
+pub async fn update_self_user(
+    new_user_form: web::Json<UpdateUser>,
+    user_service: web::Data<UserService>,
+    claims: JwtClaims
+) -> Result<()> {
+    let (mut user_res, _) = user_res_from_jwt(&claims, &user_service).await?;
+
+    Ok(user_res.update_user(new_user_form.into_inner()).await?.into())
+}
+
+/// Fetch the booked tickets that belong to the logged in user
 #[utoipa::path(
     context_path = "/api/v1/user",
     responses(
@@ -60,6 +86,7 @@ pub async fn get_self_tickets(
         .into())
 }
 
+/// Fetch the posted movie reviews from the logged in user
 #[utoipa::path(
     context_path = "/api/v1/user",
     responses(
@@ -81,8 +108,10 @@ pub async fn get_self_reviews(
     Ok(user_res.get_reviews().await?.into())
 }
 
+/// Update the password to the logged in user
 #[utoipa::path(
     context_path = "/api/v1/user",
+    request_body = NewPasswordForm,
     responses(
         (status = "5XX", description = "Internal server error has occurred (database/misc)"),
         (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
@@ -117,6 +146,7 @@ pub async fn update_self_password(
         .into())
 }
 
+/// Fetch partial information about a user
 #[utoipa::path(
     context_path = "/api/v1/user",
     responses(
@@ -141,6 +171,7 @@ pub async fn get_partial_user(
     }
 }
 
+/// Fetch user reviews belonging to the selected user ID
 #[utoipa::path(
     context_path = "/api/v1/user",
     responses(

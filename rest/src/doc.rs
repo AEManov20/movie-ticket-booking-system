@@ -6,6 +6,7 @@ use utoipa::{
 use crate::{handlers::auth::EmailVerificationQuery, services::SortBy};
 use crate::handlers::movie::{MovieReviewQuery, MovieQuery};
 use crate::handlers::role::BridgeRoleQuery;
+use crate::handlers::user::NewPasswordForm;
 use crate::services::user::LoginResponse;
 
 use super::*;
@@ -32,7 +33,7 @@ impl Modify for AuthAddon {
         handlers::role::query_bridge_roles,
     ),
     components(
-        schemas(SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
+        schemas(PartialMovie, PartialMovieReview, ExtendedMovieReview, PartialUser, Ticket, User, SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
     ),
     modifiers(&AuthAddon)
 )]
@@ -60,7 +61,7 @@ pub struct RoleApiDoc;
         handlers::theatre::ticket_type::delete_ticket_type,
     ),
     components(
-        schemas(SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
+        schemas(PartialMovie, PartialMovieReview, ExtendedMovieReview, PartialUser, Ticket, User, SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
     ),
     modifiers(&AuthAddon)
 )]
@@ -80,7 +81,7 @@ pub struct TheatreApiDoc;
         handlers::movie::create_movie,
     ),
     components(
-        schemas(SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
+        schemas(PartialMovie, PartialMovieReview, ExtendedMovieReview, PartialUser, Ticket, User, SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
     ),
     modifiers(&AuthAddon)
 )]
@@ -93,7 +94,7 @@ pub struct MovieApiDoc;
         handlers::language::get_language,
     ),
     components(
-        schemas(SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
+        schemas(PartialMovie, PartialMovieReview, ExtendedMovieReview, PartialUser, Ticket, User, SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
     ),
     modifiers(&AuthAddon)
 )]
@@ -107,8 +108,24 @@ pub struct LanguageApiDoc;
         handlers::auth::verify_email,
     ),
     components(
-        schemas(SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
+        schemas(PartialMovie, PartialMovieReview, ExtendedMovieReview, PartialUser, Ticket, User, SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
     ),
     modifiers(&AuthAddon)
 )]
 pub struct AuthApiDoc;
+
+#[derive(OpenApi)]
+#[openapi(
+    paths(
+        handlers::user::get_self_user,
+        handlers::user::get_self_tickets,
+        handlers::user::update_self_password,
+        handlers::user::get_partial_user,
+        handlers::user::get_user_reviews,
+    ),
+    components(
+        schemas(NewPasswordForm, PartialMovie, PartialMovieReview, ExtendedMovieReview, PartialUser, Ticket, User, SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
+    ),
+    modifiers(&AuthAddon)
+)]
+pub struct UserApiDoc;

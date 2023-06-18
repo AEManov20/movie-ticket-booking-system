@@ -243,7 +243,7 @@ impl UserResource {
         Ok(())
     }
 
-    pub async fn update_user(&mut self, new_user: FormUser) -> Result<(), DatabaseError> {
+    pub async fn update_user(&mut self, new_user: UpdateUser) -> Result<(), DatabaseError> {
         use crate::schema::users::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -252,12 +252,7 @@ impl UserResource {
         let result = conn
             .interact(move |conn| {
                 diesel::update(users.filter(id.eq(user.id)).filter(is_deleted.eq(false)))
-                    .set((
-                        first_name.eq(new_user.first_name.clone()),
-                        last_name.eq(new_user.last_name.clone()),
-                        email.eq(new_user.email.clone()),
-                        username.eq(new_user.username),
-                    ))
+                    .set(new_user)
                     .returning(User::as_returning())
                     .get_result(conn)
             })
