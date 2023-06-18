@@ -3,7 +3,7 @@ use utoipa::{ToSchema, IntoParams};
 use super::*;
 
 use crate::{
-    model::{FormMovie, FormMovieReview, JwtClaims, Movie, MovieReview, Theatre},
+    model::{FormMovie, FormMovieReview, JwtClaims, Movie, MovieReview, Theatre, ExtendedUserReview},
     services::{movie::MovieService, user::UserService, SortBy},
     doc
 };
@@ -128,7 +128,7 @@ pub async fn get_reviews(
     path: web::Path<(uuid::Uuid,)>,
     query: web::Query<MovieReviewQuery>,
     movie_service: web::Data<MovieService>,
-) -> Result<Vec<MovieReview>> {
+) -> Result<Vec<ExtendedUserReview>> {
     query.validate()?;
 
     Ok(movie_service

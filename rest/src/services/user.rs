@@ -268,10 +268,7 @@ impl UserResource {
         Ok(())
     }
 
-    pub async fn update_password(
-        &mut self,
-        new_password: String,
-    ) -> Result<(), DatabaseError> {
+    pub async fn update_password(&mut self, new_password: String) -> Result<(), DatabaseError> {
         let conn = self.pool.get().await?;
         let user = self.user.clone();
 
@@ -290,10 +287,12 @@ impl UserResource {
                         return Err(NotFound);
                     }
 
-                    Ok(diesel::update(users.filter(id.eq(id_)).filter(is_deleted.eq(false)))
-                        .set(password_hash.eq(hash))
-                        .returning(User::as_returning())
-                        .get_result(conn)?)
+                    Ok(
+                        diesel::update(users.filter(id.eq(id_)).filter(is_deleted.eq(false)))
+                            .set(password_hash.eq(hash))
+                            .returning(User::as_returning())
+                            .get_result(conn)?,
+                    )
                 }
                 Err(_) => Err(NotFound),
             }
@@ -349,7 +348,7 @@ impl UserResource {
                     .get_result(conn)
             })
             .await??;
-        
+
         Ok(TicketResource::new(result, self.pool.clone()))
     }
 
@@ -364,18 +363,32 @@ impl UserResource {
         Ok(())
     }
 
-    pub async fn get_reviews(&self) -> Result<Vec<MovieReview>, DatabaseError> {
+    pub async fn get_reviews(&self) -> Result<Vec<ExtendedMovieReview>, DatabaseError> {
+        use crate::schema::*;
+
         let conn = self.pool.get().await?;
         let cloned_user = self.user.clone();
 
         Ok(conn
-            .interact(move |conn| MovieReview::belonging_to(&cloned_user).load(conn))
+            .interact(move |conn| {
+                MovieReview::belonging_to(&cloned_user)
+                    .inner_join(movies::table)
+                    .select((
+                        movie_reviews::id,
+                        PartialMovie::as_select(),
+                        movie_reviews::content,
+                        movie_reviews::rating,
+                        movie_reviews::created_at,
+                        movie_reviews::votes,
+                    ))
+                    .load(conn)
+            })
             .await??)
     }
 
     pub async fn create_review(
         &self,
-        review: FormMovieReview
+        review: FormMovieReview,
     ) -> Result<MovieReview, DatabaseError> {
         let conn = self.pool.get().await?;
 
@@ -383,7 +396,7 @@ impl UserResource {
             author_user_id: self.user.id,
             content: review.content,
             movie_id: review.movie_id,
-            rating: review.rating
+            rating: review.rating,
         };
 
         Ok(conn
@@ -409,10 +422,14 @@ impl UserResource {
 
         Ok(conn
             .interact(move |conn| {
-                diesel::update(movie_reviews.filter(id.eq(id_)).filter(author_user_id.eq(user_id)))
-                    .set((content.eq(content_), rating.eq(rating_)))
-                    .returning(MovieReview::as_returning())
-                    .get_result(conn)
+                diesel::update(
+                    movie_reviews
+                        .filter(id.eq(id_))
+                        .filter(author_user_id.eq(user_id)),
+                )
+                .set((content.eq(content_), rating.eq(rating_)))
+                .returning(MovieReview::as_returning())
+                .get_result(conn)
             })
             .await??)
     }

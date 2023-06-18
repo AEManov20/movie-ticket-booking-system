@@ -134,21 +134,30 @@ impl MovieService {
         limit: i64,
         offset: i64,
         sort_by: SortBy,
-    ) -> Result<Vec<MovieReview>, DatabaseError> {
-        use crate::schema::movie_reviews::dsl::*;
+    ) -> Result<Vec<ExtendedUserReview>, DatabaseError> {
+        use crate::schema::*;
 
         let conn = self.pool.get().await?;
 
         Ok(conn
             .interact(move |conn| {
-                let query = movie_reviews
-                    .filter(movie_id.eq(movie_id_))
+                let query = movie_reviews::table
+                    .inner_join(users::table)
+                    .filter(movie_reviews::movie_id.eq(movie_id_))
                     .limit(limit)
+                    .select((
+                        movie_reviews::id,
+                        PartialUser::as_select(),
+                        movie_reviews::content,
+                        movie_reviews::rating,
+                        movie_reviews::created_at,
+                        movie_reviews::votes,
+                    ))
                     .offset(offset);
 
                 match sort_by {
-                    SortBy::Newest => query.order_by(created_at.desc()).load::<MovieReview>(conn),
-                    SortBy::Oldest => query.order_by(created_at.asc()).load::<MovieReview>(conn),
+                    SortBy::Newest => query.order_by(movie_reviews::created_at.desc()).load::<ExtendedUserReview>(conn),
+                    SortBy::Oldest => query.order_by(movie_reviews::created_at.asc()).load::<ExtendedUserReview>(conn),
                 }
             })
             .await??)

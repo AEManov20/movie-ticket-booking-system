@@ -12,13 +12,14 @@ use crate::schema::*;
 use crate::util::JWT_ALGO;
 use crate::vars::jwt_user_secret;
 
-#[derive(Selectable, Identifiable, Queryable, Debug, Serialize, Deserialize, Clone, AsChangeset)]
+#[derive(Selectable, Identifiable, Queryable, Debug, Serialize, Deserialize, Clone, AsChangeset, ToSchema)]
 pub struct User {
     pub id: uuid::Uuid,
     pub first_name: String,
     pub last_name: String,
     pub email: String,
     pub username: String,
+    #[serde(skip)]
     pub password_hash: Option<String>,
     pub created_at: chrono::NaiveDateTime,
     #[serde(skip)]
@@ -26,6 +27,15 @@ pub struct User {
     pub is_activated: bool,
     #[serde(skip)]
     pub is_deleted: bool,
+}
+
+#[derive(Selectable, Identifiable, Queryable, Debug, Serialize, Clone, AsChangeset, ToSchema)]
+#[diesel(table_name = users)]
+pub struct PartialUser {
+    pub id: uuid::Uuid,
+    pub first_name: String,
+    pub last_name: String,
+    pub username: String
 }
 
 #[derive(Deserialize, Debug, Clone, Validate, ToSchema, IntoParams)]
@@ -188,6 +198,15 @@ pub struct Movie {
     pub is_deleted: bool,
 }
 
+#[derive(Selectable, Identifiable, Queryable, Debug, Serialize, Clone, AsChangeset, ToSchema)]
+#[diesel(table_name = movies)]
+pub struct PartialMovie {
+    pub id: uuid::Uuid,
+    pub name: String,
+    pub genre: String,
+    pub release_date: chrono::NaiveDate,
+}
+
 #[derive(Insertable, Deserialize, AsChangeset, Clone, Validate, ToSchema)]
 #[diesel(table_name = movies)]
 pub struct FormMovie {
@@ -215,6 +234,28 @@ pub struct MovieReview {
     pub id: uuid::Uuid,
     pub author_user_id: uuid::Uuid,
     pub movie_id: uuid::Uuid,
+    pub content: Option<String>,
+    pub rating: f64,
+    pub created_at: chrono::NaiveDateTime,
+    pub votes: i32,
+}
+
+#[derive(Identifiable, Serialize, Queryable, ToSchema)]
+#[diesel(table_name = movie_reviews)]
+pub struct ExtendedUserReview {
+    pub id: uuid::Uuid,
+    pub author: PartialUser,
+    pub content: Option<String>,
+    pub rating: f64,
+    pub created_at: chrono::NaiveDateTime,
+    pub votes: i32,
+}
+
+#[derive(Identifiable, Serialize, Queryable, ToSchema)]
+#[diesel(table_name = movie_reviews)]
+pub struct ExtendedMovieReview {
+    pub id: uuid::Uuid,
+    pub movie: PartialMovie,
     pub content: Option<String>,
     pub rating: f64,
     pub created_at: chrono::NaiveDateTime,
