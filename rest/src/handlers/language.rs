@@ -1,11 +1,17 @@
 use std::collections::HashMap;
 
-use crate::{model::Language, services::language::LanguageService};
+use crate::{model::Language, services::language::LanguageService, doc};
 
 use super::*;
 
 /// Gets all possible languages as a dictionary
-#[utoipa::path(context_path = "/api/v1/language")]
+#[utoipa::path(
+    context_path = "/api/v1/language",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = OK, description = "Database operations were successful and the languages have been returned", body = Hashmap<String, (uuid::Uuid, String)>)
+    )
+)]
 #[get("/all")]
 pub async fn get_all_languages(
     language_service: web::Data<LanguageService>,
@@ -20,7 +26,14 @@ pub async fn get_all_languages(
 }
 
 /// Gets a certain language by ID
-#[utoipa::path(context_path = "/api/v1/language")]
+#[utoipa::path(
+    context_path = "/api/v1/language",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)", body = DocError, example = json!(doc!(ErrorType::Database(DatabaseError::Other("".to_string()))))),
+        (status = NOT_FOUND, description = "The language was not found", body = DocError),
+        (status = OK, description = "The language has been found and returned", body = Language)
+    )
+)]
 #[get("/{id}")]
 pub async fn get_language(
     path: web::Path<uuid::Uuid>,
