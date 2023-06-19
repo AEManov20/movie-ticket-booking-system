@@ -30,6 +30,9 @@ pub async fn get_all_ticket_types(
 #[utoipa::path(
     context_path = "/api/v1/theatre/{id}/ticket_type",
     request_body = FormTicketType,
+    params(
+        ("id" = uuid::Uuid, description = "Unique storage ID for Theatre")
+    ),
     responses(
         (status = "5XX", description = "Internal server error has occurred (database/misc)"),
         (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),

@@ -215,6 +215,9 @@ pub async fn delete_theatre_screening(
 #[utoipa::path(
     context_path = "/api/v1/theatre/{id}/screening",
     request_body = FormTheatreScreening,
+    params(
+        ("id" = uuid::Uuid, description = "Unique storage ID for Theatre")
+    ),
     responses(
         (status = "5XX", description = "Internal server error has occurred (database/misc)"),
         (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),

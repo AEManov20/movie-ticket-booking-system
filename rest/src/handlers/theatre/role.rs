@@ -43,7 +43,7 @@ pub struct UserRoleForm {
     )
 )]
 #[get("/all")]
-pub async fn get_all_roles(
+pub async fn get_all_roles_theatre(
     path: web::Path<(uuid::Uuid,)>,
     bridge_role_service: web::Data<BridgeRoleService>,
     role_service: web::Data<RoleService>,
@@ -148,7 +148,7 @@ pub async fn update_roles_batch(
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/role")
-            .service(get_all_roles)
+            .service(get_all_roles_theatre)
             .service(update_roles_batch),
     );
 }
