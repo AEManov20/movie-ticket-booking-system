@@ -69,10 +69,7 @@ pub async fn create_ticket_type(
     }
 
     Ok(theatre_res
-        .create_ticket_type(CreateTicketType::from_form(
-            new_ticket_type.into_inner(),
-            theatre_id,
-        ))
+        .create_ticket_type(new_ticket_type.into_inner())
         .await?
         .into())
 }

@@ -261,10 +261,7 @@ pub async fn create_theatre_screening(
     }
 
     Ok(theatre_res
-        .create_theatre_screening(CreateTheatreScreening::from_form(
-            new_theatre_screening.into_inner(),
-            theatre_id,
-        ))
+        .create_theatre_screening(new_theatre_screening.into_inner())
         .await?
         .into())
 }

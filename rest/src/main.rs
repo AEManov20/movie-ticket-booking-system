@@ -35,15 +35,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let role_service = RoleService::new(pool.clone());
     let language_service = LanguageService::new(pool.clone());
 
-    let docs = vec![
-        (Url::new("role.json", "/api-docs/role.json"), doc::RoleApiDoc::openapi()),
-        (Url::new("theatre.json", "/api-docs/theatre.json"), doc::TheatreApiDoc::openapi()),
-        (Url::new("movie.json", "/api-docs/movie.json"), doc::MovieApiDoc::openapi()),
-        (Url::new("language.json", "/api-docs/language.json"), doc::LanguageApiDoc::openapi()),
-        (Url::new("auth.json", "/api-docs/auth.json"), doc::AuthApiDoc::openapi()),
-        (Url::new("user.json", "/api-docs/user.json"), doc::UserApiDoc::openapi())
-    ];
-
     HttpServer::new(move || {
         App::new()
             .wrap(actix_web::middleware::Logger::default())
@@ -55,7 +46,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .app_data(web::Data::new(language_service.clone()))
             .service(web::scope("/api/v1").configure(handlers::config))
             .service(
-                SwaggerUi::new("/swagger-ui/{_:.*}").urls(docs.clone()),
+                SwaggerUi::new("/swagger-ui/{_:.*}").url("/api-docs/openapi.json", doc::ApiDoc::openapi()),
             )
             .route("/", web::get().to(root_response))
     })

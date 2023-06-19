@@ -268,13 +268,14 @@ pub async fn create_movie(
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/movie")
-            .service(submit_new_review)
-            .service(query_movies)
             .service(create_movie)
+            .service(query_movies)
+            .service(submit_new_review)
             .service(get_review_by_id)
             .service(delete_review_by_id)
-            .service(get_theatres_by_movie_id)
             .service(get_movie_by_id)
-            .service(delete_movie_by_id),
+            .service(delete_movie_by_id)
+            .service(get_reviews)
+            .service(get_theatres_by_movie_id),
     );
 }

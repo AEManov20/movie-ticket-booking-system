@@ -1,4 +1,4 @@
-use crate::model::{FormHall, Hall, CreateHall};
+use crate::model::{CreateHall, FormHall, Hall, SeatData};
 
 use super::*;
 
@@ -70,6 +70,10 @@ pub async fn create_hall(
         return Err(ErrorType::NotFound)
     };
 
+    if let Err(_) = serde_json::from_value::<SeatData>(new_hall.seat_data.clone()) {
+        return Err(ErrorType::Invalid);
+    }
+
     if !user.is_super_user {
         check_roles_or!(
             [Role::TheatreOwner],
@@ -80,7 +84,7 @@ pub async fn create_hall(
         );
     }
 
-    let hall: Hall = theatre.create_hall(CreateHall::from_form(new_hall.into_inner(), theatre_id)).await?.into();
+    let hall: Hall = theatre.create_hall(new_hall.into_inner()).await?.into();
     Ok(hall.into())
 }
 

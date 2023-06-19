@@ -14,7 +14,7 @@ diesel::table! {
         id -> Uuid,
         theatre_id -> Uuid,
         name -> Varchar,
-        seat_data -> Json,
+        seat_data -> Jsonb,
         is_deleted -> Bool,
     }
 }

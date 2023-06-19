@@ -17,7 +17,7 @@ pub enum RoleUpdateAction {
     Delete,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize, Serialize, ToSchema)]
 pub struct UserRoleForm {
     #[schema(example = json!(Action::Create))]
     pub action: RoleUpdateAction,
@@ -137,10 +137,10 @@ pub async fn update_roles_batch(
         };
     }
 
-    bridge_role_service.register_roles(ins_roles).await?;
     bridge_role_service
         .unregister_roles_batch(del_roles)
         .await?;
+    bridge_role_service.register_roles(ins_roles).await?;
 
     Ok(().into())
 }

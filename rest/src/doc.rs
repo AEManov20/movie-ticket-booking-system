@@ -1,18 +1,18 @@
 use utoipa::{
     openapi::security::{ApiKey, ApiKeyValue, SecurityScheme},
-    Modify, OpenApi
+    Modify, OpenApi,
 };
 
-use crate::{handlers::auth::EmailVerificationQuery, services::SortBy};
-use crate::handlers::movie::{MovieReviewQuery, MovieQuery};
+use crate::handlers::movie::{MovieQuery, MovieReviewQuery};
 use crate::handlers::role::BridgeRoleQuery;
 use crate::handlers::user::NewPasswordForm;
 use crate::services::user::LoginResponse;
+use crate::{handlers::auth::EmailVerificationQuery, services::SortBy};
 
 use super::*;
 use model::*;
 
-use handlers::theatre::role::{UserRoleForm, RoleUpdateAction};
+use handlers::theatre::role::{RoleUpdateAction, UserRoleForm};
 
 struct AuthAddon;
 
@@ -25,19 +25,6 @@ impl Modify for AuthAddon {
         )
     }
 }
-
-#[derive(OpenApi)]
-#[openapi(
-    paths(
-        handlers::role::get_all_roles,
-        handlers::role::query_bridge_roles,
-    ),
-    components(
-        schemas(PartialMovie, PartialMovieReview, ExtendedMovieReview, PartialUser, Ticket, User, SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
-    ),
-    modifiers(&AuthAddon)
-)]
-pub struct RoleApiDoc;
 
 #[derive(OpenApi)]
 #[openapi(
@@ -59,17 +46,10 @@ pub struct RoleApiDoc;
         handlers::theatre::ticket_type::get_all_ticket_types,
         handlers::theatre::ticket_type::create_ticket_type,
         handlers::theatre::ticket_type::delete_ticket_type,
-    ),
-    components(
-        schemas(PartialMovie, PartialMovieReview, ExtendedMovieReview, PartialUser, Ticket, User, SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
-    ),
-    modifiers(&AuthAddon)
-)]
-pub struct TheatreApiDoc;
-
-#[derive(OpenApi)]
-#[openapi(
-    paths(
+        handlers::theatre::ticket::query_tickets,
+        handlers::theatre::ticket::create_ticket,
+        handlers::theatre::ticket::validate,
+        handlers::theatre::ticket::validate_and_mark,
         handlers::movie::submit_new_review,
         handlers::movie::get_review_by_id,
         handlers::movie::delete_review_by_id,
@@ -79,53 +59,25 @@ pub struct TheatreApiDoc;
         handlers::movie::get_movie_by_id,
         handlers::movie::delete_movie_by_id,
         handlers::movie::create_movie,
-    ),
-    components(
-        schemas(PartialMovie, PartialMovieReview, ExtendedMovieReview, PartialUser, Ticket, User, SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
-    ),
-    modifiers(&AuthAddon)
-)]
-pub struct MovieApiDoc;
-
-#[derive(OpenApi)]
-#[openapi(
-    paths(
         handlers::language::get_all_languages,
         handlers::language::get_language,
-    ),
-    components(
-        schemas(PartialMovie, PartialMovieReview, ExtendedMovieReview, PartialUser, Ticket, User, SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
-    ),
-    modifiers(&AuthAddon)
-)]
-pub struct LanguageApiDoc;
-
-#[derive(OpenApi)]
-#[openapi(
-    paths(
         handlers::auth::login_user,
         handlers::auth::register_user,
         handlers::auth::verify_email,
-    ),
-    components(
-        schemas(PartialMovie, PartialMovieReview, ExtendedMovieReview, PartialUser, Ticket, User, SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
-    ),
-    modifiers(&AuthAddon)
-)]
-pub struct AuthApiDoc;
-
-#[derive(OpenApi)]
-#[openapi(
-    paths(
+        handlers::role::get_all_roles,
+        handlers::role::query_bridge_roles,
         handlers::user::get_self_user,
         handlers::user::get_self_tickets,
         handlers::user::update_self_password,
         handlers::user::get_partial_user,
         handlers::user::get_user_reviews,
+        handlers::user::update_self_user,
+        handlers::user::get_self_reviews,
+        handlers::user::get_self_roles
     ),
     components(
-        schemas(NewPasswordForm, PartialMovie, PartialMovieReview, ExtendedMovieReview, PartialUser, Ticket, User, SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
+        schemas(FormTicket, NewPasswordForm, PartialMovie, PartialMovieReview, ExtendedMovieReview, PartialUser, Ticket, User, SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
     ),
     modifiers(&AuthAddon)
 )]
-pub struct UserApiDoc;
+pub struct ApiDoc;

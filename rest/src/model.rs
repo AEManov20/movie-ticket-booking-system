@@ -112,15 +112,17 @@ pub struct Ticket {
     pub used: bool,
 }
 
+#[derive(Deserialize, AsChangeset, IntoParams, ToSchema)]
+#[diesel(table_name = tickets)]
 pub struct FormTicket {
-    pub theatre_movie_id: uuid::Uuid,
+    pub theatre_screening_id: uuid::Uuid,
     pub ticket_type_id: uuid::Uuid,
     pub issuer_user_id: uuid::Uuid,
     pub seat_row: i32,
     pub seat_column: i32,
 }
 
-#[derive(Insertable, Deserialize, AsChangeset)]
+#[derive(Insertable)]
 #[diesel(table_name = tickets)]
 pub struct CreateTicket {
     pub owner_user_id: uuid::Uuid,
@@ -189,6 +191,11 @@ pub struct TheatreScreeningEvent {
     pub starting_time: chrono::NaiveDateTime,
     pub length: f64,
     pub movie_name: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SeatData {
+    data: Vec<Vec<u16>>,
 }
 
 #[derive(
@@ -387,6 +394,27 @@ pub struct TicketType {
     pub is_deleted: bool,
 }
 
+#[derive(Insertable)]
+#[diesel(table_name = ticket_types)]
+pub struct CreateTicketType {
+    pub type_: String,
+    pub description: String,
+    pub theatre_id: uuid::Uuid,
+    pub currency: String,
+    pub price: f64,
+}
+
+#[derive(Deserialize, AsChangeset, ToSchema)]
+#[diesel(table_name = ticket_types)]
+pub struct FormTicketType {
+    #[serde(alias = "type")]
+    #[serde(rename(serialize = "type"))]
+    pub type_: String,
+    pub description: String,
+    pub currency: String,
+    pub price: f64,
+}
+
 #[derive(
     Selectable,
     Identifiable,
@@ -453,25 +481,17 @@ pub struct Language {
     pub name: String,
 }
 
-#[derive(Deserialize, AsChangeset, ToSchema)]
-#[diesel(table_name = ticket_types)]
-pub struct FormTicketType {
-    #[serde(alias = "type")]
-    #[serde(rename(serialize = "type"))]
-    pub type_: String,
-    pub description: String,
-    pub currency: String,
-    pub price: f64,
-}
-
-#[derive(Insertable)]
-#[diesel(table_name = ticket_types)]
-pub struct CreateTicketType {
-    pub type_: String,
-    pub description: String,
-    pub theatre_id: uuid::Uuid,
-    pub currency: String,
-    pub price: f64,
+#[derive(Validate, Deserialize, ToSchema, IntoParams)]
+pub struct TicketQuery {
+    pub owner_id: Option<uuid::Uuid>,
+    pub screening_id: Option<uuid::Uuid>,
+    pub ticket_type_id: Option<uuid::Uuid>,
+    pub issuer_id: Option<uuid::Uuid>,
+    pub hall_id: Option<uuid::Uuid>,
+    pub movie_id: Option<uuid::Uuid>,
+    #[validate(range(min = 1, max = 100))]
+    pub limit: i64,
+    pub offset: i64,
 }
 
 impl Role {

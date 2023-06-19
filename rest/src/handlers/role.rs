@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use rayon::prelude::*;
 
-use utoipa::ToSchema;
+use utoipa::{ToSchema, IntoParams};
 
 use crate::{
     model::{Role, UserTheatreRole},
@@ -11,9 +11,9 @@ use crate::{
 
 use super::*;
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema, IntoParams)]
 pub struct BridgeRoleQuery {
-    pub role_id: uuid::Uuid,
+    pub role_id: Option<uuid::Uuid>,
     pub user_id: Option<uuid::Uuid>,
     pub theatre_id: uuid::Uuid,
 }
@@ -47,6 +47,12 @@ pub async fn get_all_roles(
         (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
         (status = FORBIDDEN, description = "User doesn't meet the required permissions"),
         (status = OK, description = "Query completed successfully and returned", body = Vec<UserTheatreRole>)
+    ),
+    params(
+        BridgeRoleQuery
+    ),
+    security(
+        ("api_key" = [])
     )
 )]
 #[get("/query_bridge")]
@@ -70,7 +76,7 @@ pub async fn query_bridge_roles(
     }
 
     Ok(bridge_role_service
-        .get_roles(Some(query.role_id), query.user_id, Some(query.theatre_id))
+        .get_roles(query.role_id, query.user_id, Some(query.theatre_id))
         .await?
         .into())
 }

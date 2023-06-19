@@ -1,8 +1,14 @@
 use utoipa::IntoParams;
 
-use crate::model::{ExtendedMovieReview, ExtendedUserReview, MovieReview, PartialUser, Ticket, FormUser, UpdateUser};
+use crate::{
+    model::{
+        ExtendedMovieReview, ExtendedUserReview, FormUser, MovieReview, PartialUser, Ticket,
+        UpdateUser, UserTheatreRole,
+    },
+    services::bridge_role::BridgeRoleService,
+};
 
-use super::*;
+use super::{theatre::role::UserRoleForm, *};
 
 #[derive(Deserialize, ToSchema, IntoParams)]
 pub struct NewPasswordForm {
@@ -50,11 +56,14 @@ pub async fn get_self_user(
 pub async fn update_self_user(
     new_user_form: web::Json<UpdateUser>,
     user_service: web::Data<UserService>,
-    claims: JwtClaims
+    claims: JwtClaims,
 ) -> Result<()> {
     let (mut user_res, _) = user_res_from_jwt(&claims, &user_service).await?;
 
-    Ok(user_res.update_user(new_user_form.into_inner()).await?.into())
+    Ok(user_res
+        .update_user(new_user_form.into_inner())
+        .await?
+        .into())
 }
 
 /// Fetch the booked tickets that belong to the logged in user
@@ -106,6 +115,30 @@ pub async fn get_self_reviews(
     let (user_res, _) = user_res_from_jwt(&claims, &user_service).await?;
 
     Ok(user_res.get_reviews().await?.into())
+}
+
+#[utoipa::path(
+    context_path = "/api/v1/user",
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
+        (status = OK, description = "Roles are returned", body = Vec<UserTheatreRole>)
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+#[get("/@me/roles")]
+pub async fn get_self_roles(
+    user_service: web::Data<UserService>,
+    bridge_role_service: web::Data<BridgeRoleService>,
+    claims: JwtClaims,
+) -> Result<Vec<UserTheatreRole>> {
+    let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
+    Ok(bridge_role_service
+        .get_roles(Some(user.id), None, None)
+        .await?
+        .into())
 }
 
 /// Update the password to the logged in user
@@ -197,6 +230,8 @@ pub fn config(cfg: &mut web::ServiceConfig) {
         web::scope("/user")
             .service(get_self_user)
             .service(get_self_tickets)
+            .service(get_self_reviews)
+            .service(update_self_user)
             .service(update_self_password)
             .service(get_partial_user)
             .service(get_user_reviews),

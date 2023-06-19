@@ -312,21 +312,17 @@ impl UserResource {
 
     pub async fn create_ticket(
         &self,
-        issuer_user_id: uuid::Uuid,
-        theatre_movie_id: uuid::Uuid,
-        ticket_type_id: uuid::Uuid,
-        seat_row: i32,
-        seat_column: i32,
+        new_ticket: FormTicket
     ) -> Result<TicketResource, DatabaseError> {
         let conn = self.pool.get().await?;
 
         let ticket = CreateTicket {
             owner_user_id: self.user.id,
-            theatre_screening_id: theatre_movie_id,
-            ticket_type_id,
-            issuer_user_id,
-            seat_row,
-            seat_column,
+            theatre_screening_id: new_ticket.theatre_screening_id,
+            ticket_type_id: new_ticket.ticket_type_id,
+            issuer_user_id: new_ticket.issuer_user_id,
+            seat_row: new_ticket.seat_row,
+            seat_column: new_ticket.seat_column,
         };
 
         let result = conn
@@ -444,7 +440,7 @@ pub struct TicketResource {
 }
 
 impl TicketResource {
-    fn new(ticket: Ticket, pool: Pool) -> Self {
+    pub fn new(ticket: Ticket, pool: Pool) -> Self {
         Self { ticket, pool }
     }
 
@@ -463,21 +459,20 @@ impl TicketResource {
         )
     }
 
-    pub fn verify_jwt(jwt: &str) -> Option<JwtClaims> {
+    pub fn verify_jwt(jwt: &str) -> Result<uuid::Uuid, DatabaseError> {
         let data = decode::<JwtClaims>(
             jwt,
             &DecodingKey::from_secret(jwt_ticket_secret().as_bytes()),
             &Validation::new(*JWT_ALGO),
-        );
+        )?;
 
-        if let Ok(data) = data {
-            Some(data.claims)
-        } else {
-            None
+        match data.claims.dat {
+            JwtType::Ticket(id) => Ok(id),
+            _ => Err(DatabaseError::Other("Invalid JWT token".to_string()))
         }
     }
 
-    async fn set_usage(&self, state: bool) -> Result<(), DatabaseError> {
+    async fn set_usage(&mut self, state: bool) -> Result<(), DatabaseError> {
         use crate::schema::tickets::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -489,14 +484,17 @@ impl TicketResource {
                 .execute(conn)
         })
         .await??;
+
+        self.ticket.used = state;
+
         Ok(())
     }
 
-    pub async fn mark_as_used(&self) -> Result<(), DatabaseError> {
+    pub async fn mark_as_used(&mut self) -> Result<(), DatabaseError> {
         self.set_usage(true).await
     }
 
-    pub async fn mark_as_unused(&self) -> Result<(), DatabaseError> {
+    pub async fn mark_as_unused(&mut self) -> Result<(), DatabaseError> {
         self.set_usage(false).await
     }
 }
