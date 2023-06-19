@@ -159,7 +159,19 @@ pub struct TheatreScreening {
     pub is_deleted: bool,
 }
 
-#[derive(Insertable, Deserialize, AsChangeset, Validate, ToSchema)]
+#[derive(Insertable, AsChangeset, Validate, ToSchema)]
+#[diesel(table_name = theatre_screenings)]
+pub struct CreateTheatreScreening {
+    pub movie_id: uuid::Uuid,
+    pub theatre_id: uuid::Uuid,
+    pub hall_id: uuid::Uuid,
+    pub subtitles_language_id: Option<uuid::Uuid>,
+    pub audio_language_id: uuid::Uuid,
+    pub starting_time: chrono::NaiveDateTime,
+    pub is_3d: Option<bool>,
+}
+
+#[derive(AsChangeset, Deserialize, Validate, ToSchema)]
 #[diesel(table_name = theatre_screenings)]
 pub struct FormTheatreScreening {
     pub movie_id: uuid::Uuid,
@@ -200,14 +212,21 @@ pub struct Hall {
     pub is_deleted: bool,
 }
 
-#[derive(Insertable, Deserialize, AsChangeset, Validate, ToSchema)]
+#[derive(Deserialize, AsChangeset, Validate, ToSchema)]
 #[diesel(table_name = halls)]
 pub struct FormHall {
     #[validate(length(max = 50))]
     #[schema(example = "Apollo 1")]
     pub name: String,
-    pub theatre_id: uuid::Uuid,
     pub seat_data: serde_json::Value,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = halls)]
+pub struct CreateHall {
+    pub name: String,
+    pub theatre_id: uuid::Uuid,
+    pub seat_data: serde_json::Value
 }
 
 #[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, ToSchema)]
@@ -434,11 +453,20 @@ pub struct Language {
     pub name: String,
 }
 
-#[derive(Insertable, Deserialize, AsChangeset, ToSchema)]
+#[derive(Deserialize, AsChangeset, ToSchema)]
 #[diesel(table_name = ticket_types)]
 pub struct FormTicketType {
     #[serde(alias = "type")]
     #[serde(rename(serialize = "type"))]
+    pub type_: String,
+    pub description: String,
+    pub currency: String,
+    pub price: f64,
+}
+
+#[derive(Insertable)]
+#[diesel(table_name = ticket_types)]
+pub struct CreateTicketType {
     pub type_: String,
     pub description: String,
     pub theatre_id: uuid::Uuid,
@@ -511,6 +539,42 @@ impl From<User> for PartialUser {
             last_name: value.last_name,
             username: value.username,
             is_super_user: value.is_super_user,
+        }
+    }
+}
+
+impl CreateTheatreScreening {
+    pub fn from_form(value: FormTheatreScreening, theatre_id: uuid::Uuid) -> Self {
+        Self {
+            movie_id: value.movie_id,
+            theatre_id,
+            hall_id: value.hall_id,
+            subtitles_language_id: value.subtitles_language_id,
+            audio_language_id: value.audio_language_id,
+            starting_time: value.starting_time,
+            is_3d: value.is_3d,
+        }
+    }
+}
+
+impl CreateTicketType {
+    pub fn from_form(value: FormTicketType, theatre_id: uuid::Uuid) -> Self {
+        Self {
+            type_: value.type_,
+            description: value.description,
+            theatre_id,
+            currency: value.currency,
+            price: value.price,
+        }
+    }
+}
+
+impl CreateHall {
+    pub fn from_form(value: FormHall, theatre_id: uuid::Uuid) -> Self {
+        Self {
+            name: value.name,
+            seat_data: value.seat_data,
+            theatre_id
         }
     }
 }

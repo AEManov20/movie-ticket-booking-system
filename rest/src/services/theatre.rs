@@ -163,7 +163,28 @@ impl TheatreResource {
             .collect())
     }
 
-    pub async fn create_hall(&self, new_hall: FormHall) -> Result<HallResource, DatabaseError> {
+    pub async fn hall_id_belongs(&self, hid: uuid::Uuid) -> Result<bool, DatabaseError> {
+        use crate::schema::*;
+
+        let conn = self.pool.get().await?;
+        let theatre = self.theatre.clone();
+
+        match conn
+            .interact(move |conn| {
+                Hall::belonging_to(&theatre)
+                    .filter(halls::id.eq(hid))
+                    .load::<Hall>(conn)
+            })
+            .await??
+            .first()
+            .cloned()
+        {
+            Some(_) => Ok(true),
+            None => Ok(false),
+        }
+    }
+
+    pub async fn create_hall(&self, new_hall: CreateHall) -> Result<HallResource, DatabaseError> {
         use crate::schema::halls::dsl::*;
 
         let conn = self.pool.get().await?;
@@ -229,7 +250,7 @@ impl TheatreResource {
 
     pub async fn create_ticket_type(
         &self,
-        new_ticket_type: FormTicketType,
+        new_ticket_type: CreateTicketType,
     ) -> Result<TicketType, DatabaseError> {
         let conn = self.pool.get().await?;
 
@@ -307,6 +328,7 @@ impl TheatreResource {
             .inner_join(movies::table)
             .filter(theatre_screenings::is_deleted.eq(false))
             .filter(movies::is_deleted.eq(false))
+            .filter(theatre_screenings::theatre_id.eq(self.theatre.id))
             .select((
                 movies::id,
                 theatre_screenings::id,
@@ -347,7 +369,7 @@ impl TheatreResource {
 
     pub async fn create_theatre_screening(
         &self,
-        theatre_screening: FormTheatreScreening,
+        theatre_screening: CreateTheatreScreening,
     ) -> Result<TheatreScreening, DatabaseError> {
         let conn = self.pool.get().await?;
 
@@ -372,10 +394,14 @@ impl TheatreResource {
 
         Ok(conn
             .interact(move |conn| {
-                diesel::update(theatre_screenings.filter(id.eq(id_)).filter(is_deleted.eq(false)))
-                    .set(new_theatre_screening)
-                    .returning(TheatreScreening::as_returning())
-                    .get_result(conn)
+                diesel::update(
+                    theatre_screenings
+                        .filter(id.eq(id_))
+                        .filter(is_deleted.eq(false)),
+                )
+                .set(new_theatre_screening)
+                .returning(TheatreScreening::as_returning())
+                .get_result(conn)
             })
             .await??)
     }
@@ -386,9 +412,13 @@ impl TheatreResource {
         let conn = self.pool.get().await?;
 
         conn.interact(move |conn| {
-            diesel::update(theatre_screenings.filter(id.eq(id_)).filter(is_deleted.eq(false)))
-                .set(is_deleted.eq(true))
-                .execute(conn)
+            diesel::update(
+                theatre_screenings
+                    .filter(id.eq(id_))
+                    .filter(is_deleted.eq(false)),
+            )
+            .set(is_deleted.eq(true))
+            .execute(conn)
         })
         .await??;
         Ok(())

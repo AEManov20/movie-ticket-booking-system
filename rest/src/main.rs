@@ -13,7 +13,7 @@ use services::{
     bridge_role::BridgeRoleService, language::LanguageService, movie::MovieService,
     role::RoleService, theatre::TheatreService, user::UserService,
 };
-use util::get_connection_pool;
+use util::{get_connection_pool, hash_mock_passwords};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::{SwaggerUi, Url};
 

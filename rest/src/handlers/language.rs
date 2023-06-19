@@ -9,18 +9,18 @@ use super::*;
     context_path = "/api/v1/language",
     responses(
         (status = "5XX", description = "Internal server error has occurred (database/misc)"),
-        (status = OK, description = "Database operations were successful and the languages have been returned", body = Hashmap<String, (uuid::Uuid, String)>)
+        (status = OK, description = "Database operations were successful and the languages have been returned", body = HashMap<String, uuid::Uuid>)
     )
 )]
 #[get("/all")]
 pub async fn get_all_languages(
     language_service: web::Data<LanguageService>,
-) -> Result<HashMap<String, (uuid::Uuid, String)>> {
+) -> Result<HashMap<String, uuid::Uuid>> {
     Ok(language_service
         .get_all_languages()
         .await?
         .iter()
-        .map(|x| (x.code.clone(), (x.id, x.name.clone())))
+        .map(|x| (x.code.clone(), x.id))
         .collect::<HashMap<_, _>>()
         .into())
 }

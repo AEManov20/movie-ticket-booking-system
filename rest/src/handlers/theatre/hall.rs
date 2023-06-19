@@ -1,4 +1,4 @@
-use crate::model::{FormHall, Hall};
+use crate::model::{FormHall, Hall, CreateHall};
 
 use super::*;
 
@@ -80,7 +80,7 @@ pub async fn create_hall(
         );
     }
 
-    let hall: Hall = theatre.create_hall(new_hall.into_inner()).await?.into();
+    let hall: Hall = theatre.create_hall(CreateHall::from_form(new_hall.into_inner(), theatre_id)).await?.into();
     Ok(hall.into())
 }
 

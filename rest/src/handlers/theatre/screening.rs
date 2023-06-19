@@ -4,7 +4,9 @@ use chrono::{Datelike, Utc};
 use utoipa::IntoParams;
 use validator::ValidationError;
 
-use crate::model::{FormTheatreScreening, TheatreScreening, TheatreScreeningEvent};
+use crate::model::{
+    CreateTheatreScreening, FormTheatreScreening, TheatreScreening, TheatreScreeningEvent,
+};
 
 use super::*;
 
@@ -130,7 +132,7 @@ pub async fn update_theatre_screening(
     claims: JwtClaims,
 ) -> Result<TheatreScreening> {
     new_theatre_screening.validate()?;
-    
+
     let (theatre_id, theatre_screening_id) = path.into_inner();
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let Some(theatre_res) = theatre_service.get_by_id(theatre_id).await? else {
@@ -145,6 +147,13 @@ pub async fn update_theatre_screening(
             bridge_role_service,
             role_service
         );
+    }
+
+    if !theatre_res
+        .hall_id_belongs(new_theatre_screening.hall_id)
+        .await?
+    {
+        return Err(ErrorType::InsufficientPermission);
     }
 
     Ok(theatre_res
@@ -244,8 +253,18 @@ pub async fn create_theatre_screening(
         );
     }
 
+    if !theatre_res
+        .hall_id_belongs(new_theatre_screening.hall_id)
+        .await?
+    {
+        return Err(ErrorType::InsufficientPermission);
+    }
+
     Ok(theatre_res
-        .create_theatre_screening(new_theatre_screening.into_inner())
+        .create_theatre_screening(CreateTheatreScreening::from_form(
+            new_theatre_screening.into_inner(),
+            theatre_id,
+        ))
         .await?
         .into())
 }

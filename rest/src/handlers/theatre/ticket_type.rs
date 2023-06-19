@@ -1,4 +1,4 @@
-use crate::model::{FormTicketType, TicketType};
+use crate::model::{CreateTicketType, FormTicketType, TicketType};
 
 use super::*;
 
@@ -69,7 +69,10 @@ pub async fn create_ticket_type(
     }
 
     Ok(theatre_res
-        .create_ticket_type(new_ticket_type.into_inner())
+        .create_ticket_type(CreateTicketType::from_form(
+            new_ticket_type.into_inner(),
+            theatre_id,
+        ))
         .await?
         .into())
 }
