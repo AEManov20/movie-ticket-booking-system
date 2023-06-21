@@ -54,6 +54,7 @@ impl Modify for AuthAddon {
         handlers::movie::submit_new_review,
         handlers::movie::get_review_by_id,
         handlers::movie::delete_review_by_id,
+        handlers::movie::update_review_by_id,
         handlers::movie::get_reviews,
         handlers::movie::query_movies,
         handlers::movie::get_movie_by_id,
@@ -76,7 +77,7 @@ impl Modify for AuthAddon {
         handlers::user::get_self_roles
     ),
     components(
-        schemas(UpdateUser, FormTicket, NewPasswordForm, PartialMovie, PartialMovieReview, ExtendedMovieReview, PartialUser, Ticket, User, SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
+        schemas(UpdateMovieReview, UpdateUser, FormTicket, NewPasswordForm, PartialMovie, PartialMovieReview, ExtendedMovieReview, PartialUser, Ticket, User, SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
     ),
     modifiers(&AuthAddon)
 )]

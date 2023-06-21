@@ -1,11 +1,14 @@
-use utoipa::{ToSchema, IntoParams};
+use utoipa::{IntoParams, ToSchema};
 
 use super::*;
 
 use crate::{
-    model::{FormMovie, FormMovieReview, JwtClaims, Movie, MovieReview, Theatre, ExtendedUserReview},
+    doc,
+    model::{
+        ExtendedUserReview, FormMovie, FormMovieReview, JwtClaims, Movie, MovieReview, Theatre,
+        UpdateMovieReview,
+    },
     services::{movie::MovieService, user::UserService, SortBy},
-    doc
 };
 
 #[derive(Deserialize, Validate, ToSchema, IntoParams)]
@@ -54,6 +57,66 @@ pub async fn submit_new_review(
         .create_review(new_review.into_inner())
         .await?
         .into())
+}
+
+#[derive(Deserialize, IntoParams)]
+pub struct UpdateReviewQuery {
+    pub review_id: uuid::Uuid,
+}
+
+/// Updates a review by ID given that the user has ownership/permission
+#[utoipa::path(
+    context_path = "/api/v1/movie",
+    request_body = UpdateMovieReview,
+    params(
+        UpdateReviewQuery
+    ),
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = UNAUTHORIZED, description = "User hasn't authenticated yet"),
+        (status = FORBIDDEN, description = "User doesn't meet the required permissions"),
+        (status = NOT_FOUND, description = "The selected review was not found"),
+        (status = OK, description = "Review updated and returned successfully", body = MovieReview)
+    ),
+    security(
+        ("api_key" = [])
+    )
+)]
+#[put("/review/{id}")]
+pub async fn update_review_by_id(
+    path: web::Path<(uuid::Uuid,)>,
+    query: web::Query<UpdateReviewQuery>,
+    new_review: web::Json<UpdateMovieReview>,
+    movie_service: web::Data<MovieService>,
+    user_service: web::Data<UserService>,
+    claims: JwtClaims,
+) -> Result<MovieReview> {
+    let (user_res, user) = user_res_from_jwt(&claims, &user_service).await?;
+    let Some(review) = movie_service.get_review_by_id(path.0).await? else {
+        return Err(ErrorType::NotFound)
+    };
+
+    if review.author_user_id == user.id {
+        Ok(user_res
+            .update_review(
+                query.review_id,
+                new_review.content.clone(),
+                new_review.rating,
+            )
+            .await?
+            .into())
+    } else if user.is_super_user {
+        Ok(user_res
+            .update_review(
+                query.review_id,
+                new_review.content.clone(),
+                new_review.rating,
+            )
+            .await?
+            .into())
+    } else {
+        Err(ErrorType::InsufficientPermission)
+    }
 }
 
 /// Gets a review by ID

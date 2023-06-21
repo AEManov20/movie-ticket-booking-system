@@ -380,6 +380,16 @@ pub struct FormMovieReview {
     pub rating: f64,
 }
 
+#[derive(Deserialize, ToSchema, Validate)]
+pub struct UpdateMovieReview {
+    #[schema(example = "This movie is the best 11/10.")]
+    #[validate(length(max = 2500))]
+    pub content: Option<String>,
+    #[schema(example = 0.95)]
+    #[validate(range(min = 0., max = 1.))]
+    pub rating: f64,
+}
+
 #[derive(
     Selectable,
     Identifiable,
