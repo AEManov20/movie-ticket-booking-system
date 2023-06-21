@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:internship_app/post_view.dart';
 import 'package:openapi_generator_annotations/openapi_generator_annotations.dart';
 
@@ -30,11 +31,12 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Hello world"),
-      ),
-      body: const PostView(),
+    return const Scaffold(
+      body: PostView(),
+      bottomNavigationBar: GNav(tabs: [
+        GButton(icon: Icons.favorite),
+        GButton(icon: Icons.account_box),
+      ]),
     );
   }
 }
