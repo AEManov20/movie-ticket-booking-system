@@ -137,21 +137,6 @@ pub async fn get_reviews(
         .into())
 }
 
-/// Gets theatres where movie is screened
-#[utoipa::path(
-    context_path = "/api/v1/movie",
-    // responses(
-    //     (status = "5XX", description = "Internal server error has occurred (database/misc)"),
-    // )
-)]
-#[get("/{id}/theatres")]
-pub async fn get_theatres_by_movie_id(
-    path: web::Path<(uuid::Uuid,)>,
-    movie_service: web::Data<MovieService>,
-) -> Result<Vec<Theatre>> {
-    todo!();
-}
-
 /// Queries movies given certain criteria
 #[utoipa::path(
     context_path = "/api/v1/movie",
@@ -275,7 +260,6 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(delete_review_by_id)
             .service(get_movie_by_id)
             .service(delete_movie_by_id)
-            .service(get_reviews)
-            .service(get_theatres_by_movie_id),
+            .service(get_reviews),
     );
 }

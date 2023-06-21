@@ -1,6 +1,6 @@
 use crate::{
     check_roles_or, doc,
-    model::{FormTheatre, Role, Theatre},
+    model::{FormTheatre, Role, Theatre, Point},
     services::{bridge_role::*, role::*, theatre::*},
 };
 
@@ -142,9 +142,27 @@ pub async fn delete_theatre(
     Ok(theatre_service.delete(theatre_id).await?.into())
 }
 
+/// Gets theatres nearby a location
+#[utoipa::path(
+    context_path = "/api/v1/theatre",
+    params(Point),
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = OK, description = "No errors occurred and the query returned", body = Vec<Theatre>)
+    )
+)]
+#[get("/available")]
+pub async fn get_nearby(
+    theatre_service: web::Data<TheatreService>,
+    location: web::Query<Point>
+) -> Result<Vec<Theatre>> {
+    Ok(theatre_service.get_nearby(location.into_inner()).await?.into())
+}
+
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/theatre")
+            .service(get_nearby)
             .service(new_theatre)
             .service(get_theatre)
             .service(update_theatre)

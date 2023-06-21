@@ -12,6 +12,12 @@ use crate::schema::*;
 use crate::util::JWT_ALGO;
 use crate::vars::jwt_user_secret;
 
+#[derive(Deserialize, Clone, IntoParams)]
+pub struct Point {
+    pub x: f64,
+    pub y: f64
+}
+
 #[derive(
     Selectable, Identifiable, Queryable, Debug, Serialize, Deserialize, Clone, AsChangeset, ToSchema,
 )]
@@ -236,12 +242,17 @@ pub struct CreateHall {
     pub seat_data: serde_json::Value
 }
 
-#[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, ToSchema)]
+#[derive(Selectable, Identifiable, Queryable, QueryableByName, Serialize, Debug, Clone, AsChangeset, ToSchema)]
 pub struct Theatre {
+    #[diesel(sql_type = diesel::sql_types::Uuid)]
     pub id: uuid::Uuid,
+    #[diesel(sql_type = diesel::sql_types::Varchar)]
     pub name: String,
+    #[diesel(sql_type = diesel::sql_types::Float8)]
     pub location_lat: f64,
+    #[diesel(sql_type = diesel::sql_types::Float8)]
     pub location_lon: f64,
+    #[diesel(sql_type = diesel::sql_types::Bool)]
     #[serde(skip)]
     pub is_deleted: bool,
 }

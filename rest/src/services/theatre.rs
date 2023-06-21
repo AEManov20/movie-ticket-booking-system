@@ -6,12 +6,6 @@ use rayon::prelude::*;
 use super::DatabaseError;
 use crate::{model::*, services::user::TicketResource};
 
-#[derive(Copy, Clone, Debug, Default)]
-struct Point {
-    x: f64,
-    y: f64,
-}
-
 #[derive(Clone)]
 pub struct TheatreService {
     pool: Pool,
@@ -115,8 +109,16 @@ impl TheatreService {
         }))
     }
 
-    pub async fn get_nearby(&self, location_: String, radius: f32) {
-        todo!();
+    pub async fn get_nearby(&self, location: Point) -> Result<Vec<Theatre>, DatabaseError> {
+        let conn = self.pool.get().await?;
+        
+        // very unsafe code below
+        Ok(conn.interact(move |conn| {
+            diesel::sql_query("SELECT id, name, location_lat, location_lon, is_deleted FROM public.theatres WHERE ($1 - location_lat) * ($1 - location_lat) + ($2 - location_lon) * ($2 - location_lon) < $3")
+                .bind::<diesel::sql_types::Float8, _>(location.x)
+                .bind::<diesel::sql_types::Float8, _>(location.y)
+                .bind::<diesel::sql_types::Float8, _>(1f64).load::<Theatre>(conn)
+        }).await??)
     }
 
     pub async fn delete(&self, id_: uuid::Uuid) -> Result<(), DatabaseError> {
