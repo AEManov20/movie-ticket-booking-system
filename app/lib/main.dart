@@ -24,7 +24,10 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
         theme: ThemeData(
-            colorSchemeSeed: const Color(0xff6750a4), useMaterial3: true),
+          fontFamily: "FiraSans",
+          colorSchemeSeed: const Color(0xff6750a4),
+          useMaterial3: true,
+        ),
         themeMode: ThemeMode.dark,
         home: AuthPage(
           buttons: [
@@ -50,19 +53,35 @@ class AuthPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-        body: Center(
-            child: Column(
+    return Scaffold(body: Center(child: AuthButtons(buttons: buttons)));
+  }
+}
+
+class AuthButtons extends StatelessWidget {
+  final List<ButtonData> buttons;
+
+  const AuthButtons({super.key, required this.buttons});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Center(child: Text("Welcome", style: TextStyle(fontSize: 60))),
-        ...buttons.map((e) => FilledButton(
+        ...buttons.map((e) => Container(
+            margin: const EdgeInsets.fromLTRB(30, 5, 30, 5),
+            child: FilledButton(
               onPressed: e.callback,
+              style: ButtonStyle(
+                  shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(3.0))),
+                  padding:
+                      MaterialStateProperty.all(const EdgeInsets.all(20.0))),
               child: Text(e.text),
-            ))
+            )))
       ],
-    )));
+    );
   }
 }
 
