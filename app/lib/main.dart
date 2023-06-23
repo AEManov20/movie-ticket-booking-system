@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
-import 'package:internship_app/pages/login.dart';
-import 'package:internship_app/post_view.dart';
 import 'package:openapi_generator_annotations/openapi_generator_annotations.dart';
 
 Future<void> main() async {
@@ -29,58 +27,112 @@ class MainApp extends StatelessWidget {
           useMaterial3: true,
         ),
         themeMode: ThemeMode.dark,
-        home: AuthPage(
-          buttons: [
-            ButtonData(text: "Login", callback: () => {}),
-            ButtonData(text: "Register", callback: () => {}),
-            ButtonData(text: "Forgot password?", callback: () => {}),
-          ],
-        ));
+        home: AuthPage());
   }
-}
-
-class ButtonData {
-  String text;
-  void Function() callback;
-
-  ButtonData({required this.text, required this.callback});
 }
 
 class AuthPage extends StatelessWidget {
-  final List<ButtonData> buttons;
-
-  const AuthPage({super.key, required this.buttons});
+  const AuthPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(body: Center(child: AuthButtons(buttons: buttons)));
+    return const Scaffold(body: Center(child: AuthButtons()));
   }
 }
 
-class AuthButtons extends StatelessWidget {
-  final List<ButtonData> buttons;
+class AuthButtons extends StatefulWidget {
+  const AuthButtons({super.key});
 
-  const AuthButtons({super.key, required this.buttons});
+  @override
+  State<AuthButtons> createState() => _AuthButtonsState();
+}
+
+class _AuthButtonsState extends State<AuthButtons> {
+  int pageState = 0;
+
+  Widget _styledAuthButton(String text, void Function() callback) {
+    return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 30, vertical: 5),
+        child: FilledButton(
+          onPressed: callback,
+          style: ButtonStyle(
+              shape: MaterialStateProperty.all(RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(3.0))),
+              padding: MaterialStateProperty.all(const EdgeInsets.all(20.0))),
+          child: Text(text),
+        ));
+  }
+
+  Widget _styledTextField(String label, bool isSecret) {
+    return Container(
+        margin: const EdgeInsets.fromLTRB(30, 5, 30, 5),
+        child: TextFormField(
+          decoration: InputDecoration(
+              border: const OutlineInputBorder(), label: Text(label)),
+        ));
+  }
 
   @override
   Widget build(BuildContext context) {
+    List<Widget> children;
+
+    switch (pageState) {
+      case 0:
+        children = [
+          const Center(child: Text("Welcome", style: TextStyle(fontSize: 60))),
+          const Divider(),
+          _styledAuthButton("Login", () {
+            setState(() {
+              pageState = 1;
+            });
+          }),
+          _styledAuthButton("Register", () {
+            setState(() {
+              pageState = 2;
+            });
+          }),
+          _styledAuthButton("Forgot password", () {})
+        ];
+        break;
+      case 1:
+        children = [
+          const Center(child: Text("Login", style: TextStyle(fontSize: 60))),
+          const Divider(),
+          _styledTextField("Username", false),
+          _styledTextField("Password", true),
+          _styledAuthButton("Login", () {}),
+          _styledAuthButton("Back", () {
+            setState(() {
+              pageState = 0;
+            });
+          })
+        ];
+        break;
+      case 2:
+        children = [
+          const Center(child: Text("Register", style: TextStyle(fontSize: 60))),
+          const Divider(),
+          _styledTextField("Email", false),
+          _styledTextField("First Name", false),
+          _styledTextField("Last Name", false),
+          _styledTextField("Username", false),
+          _styledTextField("Password", true),
+          _styledAuthButton("Register", () {}),
+          _styledAuthButton("Back", () {
+            setState(() {
+              pageState = 0;
+            });
+          })
+        ];
+        break;
+      default:
+        throw StateError("Invalid page state");
+    }
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        const Center(child: Text("Welcome", style: TextStyle(fontSize: 60))),
-        ...buttons.map((e) => Container(
-            margin: const EdgeInsets.fromLTRB(30, 5, 30, 5),
-            child: FilledButton(
-              onPressed: e.callback,
-              style: ButtonStyle(
-                  shape: MaterialStateProperty.all(RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(3.0))),
-                  padding:
-                      MaterialStateProperty.all(const EdgeInsets.all(20.0))),
-              child: Text(e.text),
-            )))
-      ],
+      children: children,
     );
   }
 }
@@ -91,7 +143,7 @@ class MainPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: const LoginPage(),
+      body: Container(),
       bottomNavigationBar: Container(
           decoration: BoxDecoration(
             color: Colors.white,
