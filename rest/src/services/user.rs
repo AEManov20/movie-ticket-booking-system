@@ -1,10 +1,17 @@
+use crate::handlers::ErrorType;
 use crate::util::JWT_ALGO;
 use deadpool_diesel::postgres::Pool;
 use diesel::associations::HasTable;
 use diesel::prelude::*;
 use diesel::result::Error::NotFound;
+use either::Either::{Left, self};
 use jsonwebtoken::Validation;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header};
+use lettre::message::Mailbox;
+use lettre::message::header::ContentType;
+use lettre::transport::smtp::response::Response;
+use lettre::{SmtpTransport, Address, Message, Transport};
+use std::str::FromStr;
 use rayon::prelude::*;
 use serde::Serialize;
 use utoipa::{ToResponse, ToSchema};
@@ -12,7 +19,7 @@ use utoipa::{ToResponse, ToSchema};
 use super::DatabaseError;
 use crate::model::*;
 use crate::password;
-use crate::vars::{jwt_email_secret, jwt_ticket_secret, jwt_user_secret};
+use crate::vars::{jwt_email_secret, jwt_ticket_secret, jwt_user_secret, gmail_user, server_domain, server_port, server_protocol};
 
 pub const EMAIL_CONFIRMATION_TOKEN_EXPIRY_DAYS: i64 = 1;
 pub const USER_TOKEN_EXPIRY_DAYS: i64 = 2;
@@ -84,8 +91,8 @@ impl UserService {
 
     pub async fn get_by_email_or_username(
         &self,
-        email_: Option<String>,
-        username_: Option<String>,
+        email_: String,
+        username_: String,
     ) -> Result<Option<UserResource>, DatabaseError> {
         use crate::schema::users::dsl::*;
 
@@ -93,17 +100,12 @@ impl UserService {
 
         let result = conn
             .interact(|conn| {
-                let mut query = users.limit(1).filter(is_deleted.eq(false)).into_boxed();
-
-                if let Some(email_) = email_ {
-                    query = query.or_filter(email.eq(email_));
-                }
-
-                if let Some(username_) = username_ {
-                    query = query.or_filter(username.eq(username_));
-                }
-
-                query.load::<User>(conn)
+                users
+                    .limit(1)
+                    .filter(is_deleted.eq(false))
+                    .filter(email.eq(email_))
+                    .or_filter(username.eq(username_))
+                    .load::<User>(conn)
             })
             .await??
             .first()
@@ -172,6 +174,10 @@ impl UserResource {
     }
 
     pub fn create_jwt(&self) -> Result<LoginResponse, DatabaseError> {
+        let Some(jwt_user_secret) = jwt_user_secret() else {
+            return Err(DatabaseError::Other("Problem building an email, because of jwt_user_secret var missing".to_string()));
+        };
+
         let token = encode(
             &Header::new(*JWT_ALGO),
             &JwtClaims {
@@ -181,16 +187,20 @@ impl UserResource {
                 exp: (chrono::Utc::now() + chrono::Duration::days(USER_TOKEN_EXPIRY_DAYS))
                     .timestamp(),
             },
-            &EncodingKey::from_secret(jwt_user_secret().as_bytes()),
+            &EncodingKey::from_secret(jwt_user_secret.as_bytes()),
         )?;
 
         Ok(LoginResponse { token })
     }
 
     pub fn verify_user_jwt(user_jwt: &str) -> Option<JwtClaims> {
+        let Some(jwt_user_secret) = jwt_user_secret() else {
+            return None;
+        };
+
         let data = decode::<JwtClaims>(
             user_jwt,
-            &DecodingKey::from_secret(jwt_user_secret().as_bytes()),
+            &DecodingKey::from_secret(jwt_user_secret.as_bytes()),
             &Validation::new(*JWT_ALGO),
         );
 
@@ -202,6 +212,10 @@ impl UserResource {
     }
 
     pub fn create_email_jwt(&self) -> Result<String, DatabaseError> {
+        let Some(jwt_email_secret) = jwt_email_secret() else {
+            return Err(DatabaseError::Other("Problem building an email, because of jwt_email_secret var missing".to_string()));
+        };
+
         Ok(jsonwebtoken::encode(
             &Header::new(*JWT_ALGO),
             &JwtClaims {
@@ -212,17 +226,61 @@ impl UserResource {
                     + chrono::Duration::days(EMAIL_CONFIRMATION_TOKEN_EXPIRY_DAYS))
                 .timestamp(),
             },
-            &EncodingKey::from_secret(jwt_email_secret().as_ref()),
+            &EncodingKey::from_secret(jwt_email_secret.as_ref()),
         )?)
     }
 
     pub fn verify_email_jwt(email_jwt: &str) -> Result<JwtClaims, DatabaseError> {
+        let Some(jwt_email_secret) = jwt_email_secret() else {
+            return Err(DatabaseError::Other("Problem building an email, because of jwt_email_secret var missing".to_string()));
+        };
+
         Ok(decode::<JwtClaims>(
             email_jwt,
-            &DecodingKey::from_secret(jwt_email_secret().as_bytes()),
+            &DecodingKey::from_secret(jwt_email_secret.as_bytes()),
             &Validation::new(*JWT_ALGO),
         )?
         .claims)
+    }
+
+    pub async fn send_email_jwt_url(&self, mailer: &SmtpTransport) -> Result<Response, DatabaseError> {
+        let Some(from_address) = gmail_user() else {
+            return Err(DatabaseError::Other("Problem building an email, because of gmail_user var missing".to_string()));
+        };
+
+        let Some(server_domain) = server_domain() else {
+            return Err(DatabaseError::Other("Problem building an email, because of server_domain var missing".to_string()));
+        };
+
+        let Some(server_port) = server_port() else {
+            return Err(DatabaseError::Other("Problem building an email, because of server_port var missing".to_string()));
+        };
+
+        let Some(server_protocol) = server_protocol() else {
+            return Err(DatabaseError::Other("Problem building an email, because of server_protocol var missing".to_string()));
+        };
+
+
+        let token = self.create_email_jwt()?;
+        let from_address = Address::from_str(&from_address)?;
+        let to_address = Address::from_str(&self.user.email)?;
+
+        let body = format!(
+            "
+    <h1>Your verification URL is below</h1>
+    <a href=\"{server_protocol}://{server_domain}:{server_port}/api/v1/auth/verify?email_key={token}\">{token}</a>
+    <h2>If you weren't expecting this email, you can ignore it.</h2>
+    "
+        );
+    
+        let email = Message::builder()
+            .from(Mailbox::new(Some("Nice Movies".to_owned()), from_address))
+            .to(Mailbox::new(None, to_address))
+            .subject("Verification Cinemaroo")
+            .header(ContentType::TEXT_HTML)
+            .body(body)?;
+
+        Ok(mailer.send(&email)?)
     }
 
     pub async fn activate(&mut self) -> Result<(), DatabaseError> {
@@ -293,7 +351,9 @@ impl UserResource {
             }
         }
 
-        let res = conn.interact(move |conn| insert_password(user.id, new_password.as_bytes(), conn)).await??;
+        let res = conn
+            .interact(move |conn| insert_password(user.id, new_password.as_bytes(), conn))
+            .await??;
         self.user.password_hash = res.password_hash;
         Ok(())
     }
@@ -312,7 +372,7 @@ impl UserResource {
 
     pub async fn create_ticket(
         &self,
-        new_ticket: FormTicket
+        new_ticket: FormTicket,
     ) -> Result<TicketResource, DatabaseError> {
         let conn = self.pool.get().await?;
 
@@ -358,10 +418,7 @@ impl UserResource {
             .interact(move |conn| {
                 MovieReview::belonging_to(&cloned_user)
                     .inner_join(movies::table)
-                    .select((
-                        PartialMovie::as_select(),
-                        PartialMovieReview::as_select(),
-                    ))
+                    .select((PartialMovie::as_select(), PartialMovieReview::as_select()))
                     .load(conn)
             })
             .await??)
@@ -444,7 +501,11 @@ impl TicketResource {
         Self { ticket, pool }
     }
 
-    pub fn create_jwt(&self) -> Result<String, jsonwebtoken::errors::Error> {
+    pub fn create_jwt(&self) -> Result<String, Either<(), jsonwebtoken::errors::Error>> {
+        let Some(jwt_ticket_secret) = jwt_ticket_secret() else {
+            return Err(Either::Left(()));
+        };
+
         let claims = JwtClaims {
             dat: JwtType::Ticket(self.ticket.id),
             sub: self.ticket.owner_user_id,
@@ -452,23 +513,30 @@ impl TicketResource {
             exp: self.ticket.expires_at.timestamp(),
         };
 
-        jsonwebtoken::encode(
+        match jsonwebtoken::encode(
             &Header::default(),
             &claims,
-            &jsonwebtoken::EncodingKey::from_secret(jwt_ticket_secret().as_bytes()),
-        )
+            &jsonwebtoken::EncodingKey::from_secret(jwt_ticket_secret.as_bytes()),
+        ) {
+            Ok(v) => Ok(v),
+            Err(e) => Err(Either::Right(e))
+        }
     }
 
     pub fn verify_jwt(jwt: &str) -> Result<uuid::Uuid, DatabaseError> {
+        let Some(jwt_ticket_secret) = jwt_ticket_secret() else {
+            return Err(DatabaseError::Other("Problem building an email, because of jwt_ticket_secret var missing".to_string()));
+        };
+
         let data = decode::<JwtClaims>(
             jwt,
-            &DecodingKey::from_secret(jwt_ticket_secret().as_bytes()),
+            &DecodingKey::from_secret(jwt_ticket_secret.as_bytes()),
             &Validation::new(*JWT_ALGO),
         )?;
 
         match data.claims.dat {
             JwtType::Ticket(id) => Ok(id),
-            _ => Err(DatabaseError::Other("Invalid JWT token".to_string()))
+            _ => Err(DatabaseError::Other("Invalid JWT token".to_string())),
         }
     }
 

@@ -26,9 +26,12 @@ serde_json = "1.0"
 # logging
 env_logger = "0.10.0"
 log = "0.4"
-# misc
+# error handling
 thiserror = "1.0"
+either = "1.8.1"
+# misc
 lazy_static = "1.4.0"
 rayon = "1.7"
 casey = "0.4.0"
 futures-util = "0.3"
+lettre = "0.10.4"

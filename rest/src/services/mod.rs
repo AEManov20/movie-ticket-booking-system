@@ -7,6 +7,8 @@ pub mod language;
 
 use argon2::password_hash;
 use deadpool_diesel::{InteractError, PoolError};
+use either::Either;
+use lettre::address::AddressError;
 use serde::Deserialize;
 use utoipa::{IntoParams, ToSchema};
 
@@ -28,8 +30,24 @@ pub enum DatabaseError {
     Interact(#[from] InteractError),
     #[error("query did not execute properly")]
     Query(#[from] diesel::result::Error),
+    #[error("something went wrong when sending an email")]
+    EmailSend(#[from] lettre::transport::smtp::Error),
+    #[error("something went wrong when building an email")]
+    EmailBuild(Either<AddressError, lettre::error::Error>),
     #[error("{}", .0)]
     Other(String)
+}
+
+impl From<AddressError> for DatabaseError {
+    fn from(value: AddressError) -> Self {
+        Self::EmailBuild(Either::Left(value))
+    }
+}
+
+impl From<lettre::error::Error> for DatabaseError {
+    fn from(value: lettre::error::Error) -> Self {
+        Self::EmailBuild(Either::Right(value))
+    }
 }
 
 impl From<password_hash::Error> for DatabaseError {

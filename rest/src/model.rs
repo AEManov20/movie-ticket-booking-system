@@ -5,7 +5,7 @@ use diesel::prelude::*;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 use std::future::{ready, Ready};
-use utoipa::{IntoParams, ToResponse, ToSchema};
+use utoipa::{IntoParams, ToSchema};
 use validator::Validate;
 
 use crate::schema::*;
@@ -541,6 +541,10 @@ impl FromRequest for JwtClaims {
     fn from_request(req: &HttpRequest, _: &mut Payload) -> Self::Future {
         use crate::handlers::ErrorType;
 
+        let Some(jwt_user_secret) = jwt_user_secret() else {
+            return ready(Err(ErrorType::ServerError))
+        };
+
         let Some(token) = req.headers().get(http::header::AUTHORIZATION) else {
             return ready(Err(ErrorType::NoAuth))
         };
@@ -552,7 +556,7 @@ impl FromRequest for JwtClaims {
         ready(
             match decode::<JwtClaims>(
                 token,
-                &DecodingKey::from_secret(jwt_user_secret().as_ref()),
+                &DecodingKey::from_secret(jwt_user_secret.as_bytes()),
                 &Validation::new(*JWT_ALGO),
             ) {
                 Ok(c) => {

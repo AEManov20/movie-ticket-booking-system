@@ -49,13 +49,8 @@ pub fn hash_mock_passwords(conn: &mut PgConnection) {
 }
 
 pub fn get_connection_pool() -> Pool {
-    let url = database_url();
-    // let manager = ConnectionManager::<PgConnection>::new(url);
-
-    // Pool::builder()
-    //     .max_size(5)
-    //     .build(manager)
-    //     .expect("Could not build connection pool")
+    let url = database_url().unwrap();
+    
     let manager = Manager::new(url, Runtime::Tokio1);
     Pool::builder(manager)
         .max_size(16)

@@ -1,13 +1,21 @@
+use std::str::FromStr;
+
 use super::*;
 use chrono::Utc;
+use lettre::{
+    message::{header::ContentType, Mailbox},
+    Address, Message, SmtpTransport, Transport,
+};
 
 use super::ErrorType;
 use crate::{
+    doc,
     model::{FormUser, JwtType, LoginUser, User},
-    services::user::{LoginResponse, UserResource, UserService}, doc,
+    services::user::{LoginResponse, UserResource, UserService},
+    vars::gmail_user,
 };
 
-use utoipa::{ToSchema, IntoParams};
+use utoipa::{IntoParams, ToSchema};
 
 // TODO: implement auth from other providers
 
@@ -37,7 +45,7 @@ pub async fn login_user(
 ) -> Result<LoginResponse> {
     params.validate()?;
 
-    let Some(user_res) = user_service.get_by_email_or_username(Some(params.email.clone()), None).await? else {
+    let Some(user_res) = user_service.get_by_email_or_username(params.email.clone(), params.email.clone()).await? else {
         return Err(ErrorType::Invalid)
     };
 
@@ -66,18 +74,19 @@ pub async fn login_user(
         (status = "5XX", description = "Internal server error has occurred (database/misc)"),
         (status = BAD_REQUEST, description = "Invalid data supplied"),
         (status = CONFLICT, description = "User already registered"),
-        (status = OK, description = "User successfully registered", body = LoginResponse)
+        (status = OK, description = "User successfully registered")
     )
 )]
 #[post("/register")]
 pub async fn register_user(
     user: web::Json<FormUser>,
     user_service: web::Data<UserService>,
-) -> Result<String> {
+    mailer_service: web::Data<SmtpTransport>,
+) -> Result<()> {
     user.validate()?;
 
     if user_service
-        .get_by_email_or_username(Some(user.email.clone()), Some(user.username.clone()))
+        .get_by_email_or_username(user.email.clone(), user.username.clone())
         .await?
         .is_some()
     {
@@ -86,8 +95,9 @@ pub async fn register_user(
 
     let user = user_service.create(user.into_inner()).await?;
 
-    // TODO: implement emailing the user with the token
-    Ok(user.create_email_jwt()?.into())
+    user.send_email_jwt_url(&mailer_service.into_inner()).await?;
+
+    Ok(().into())
 }
 
 /// Marks an account as verified/activated, given that the email token is valid
