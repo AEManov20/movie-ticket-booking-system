@@ -1,8 +1,33 @@
+import 'package:api/api.dart';
 import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:internship_app/adapters/movie.dart';
+import 'package:internship_app/adapters/theatre.dart';
+import 'package:internship_app/adapters/user.dart';
+import 'package:internship_app/scaffolds/auth.dart';
+import 'package:internship_app/widgets/navbar.dart';
 import 'package:openapi_generator_annotations/openapi_generator_annotations.dart';
 
+const favouriteMovieBox = 'favourite_movies_data';
+const favouriteTheatreBox = 'favourite_theatres_data';
+const userBox = 'user_data';
+const settingsBox = 'settings_data';
+
+const baseApiPath = 'http://localhost:8080';
+
 Future<void> main() async {
+  await Hive.initFlutter();
+
+  Hive.registerAdapter(MovieAdapter());
+  Hive.registerAdapter(TheatreAdapter());
+  Hive.registerAdapter(UserAdapter());
+
+  await Hive.openBox<Movie>(favouriteMovieBox);
+  await Hive.openBox<Theatre>(favouriteTheatreBox);
+  await Hive.openBox(userBox);
+  await Hive.openBox(settingsBox);
+
   runApp(const MainApp());
 }
 
@@ -27,113 +52,14 @@ class MainApp extends StatelessWidget {
           useMaterial3: true,
         ),
         themeMode: ThemeMode.dark,
-        home: AuthPage());
-  }
-}
-
-class AuthPage extends StatelessWidget {
-  const AuthPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: AuthButtons()));
-  }
-}
-
-class AuthButtons extends StatefulWidget {
-  const AuthButtons({super.key});
-
-  @override
-  State<AuthButtons> createState() => _AuthButtonsState();
-}
-
-class _AuthButtonsState extends State<AuthButtons> {
-  int pageState = 0;
-
-  Widget _styledAuthButton(String text, void Function() callback) {
-    return Container(
-        margin: const EdgeInsets.symmetric(horizontal: 30, vertical: 5),
-        child: FilledButton(
-          onPressed: callback,
-          style: ButtonStyle(
-              shape: MaterialStateProperty.all(RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(3.0))),
-              padding: MaterialStateProperty.all(const EdgeInsets.all(20.0))),
-          child: Text(text),
+        home: ValueListenableBuilder(
+          valueListenable: Hive.box(userBox).listenable(keys: ['auth']),
+          builder: (context, value, child) {
+            return value.get('auth') == null
+                ? const AuthScaffold()
+                : const MainPage();
+          },
         ));
-  }
-
-  Widget _styledTextField(String label, bool isSecret) {
-    return Container(
-        margin: const EdgeInsets.fromLTRB(30, 5, 30, 5),
-        child: TextFormField(
-          decoration: InputDecoration(
-              border: const OutlineInputBorder(), label: Text(label)),
-        ));
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    List<Widget> children;
-
-    switch (pageState) {
-      case 0:
-        children = [
-          const Center(child: Text("Welcome", style: TextStyle(fontSize: 60))),
-          const Divider(),
-          _styledAuthButton("Login", () {
-            setState(() {
-              pageState = 1;
-            });
-          }),
-          _styledAuthButton("Register", () {
-            setState(() {
-              pageState = 2;
-            });
-          }),
-          _styledAuthButton("Forgot password", () {})
-        ];
-        break;
-      case 1:
-        children = [
-          const Center(child: Text("Login", style: TextStyle(fontSize: 60))),
-          const Divider(),
-          _styledTextField("Username", false),
-          _styledTextField("Password", true),
-          _styledAuthButton("Login", () {}),
-          _styledAuthButton("Back", () {
-            setState(() {
-              pageState = 0;
-            });
-          })
-        ];
-        break;
-      case 2:
-        children = [
-          const Center(child: Text("Register", style: TextStyle(fontSize: 60))),
-          const Divider(),
-          _styledTextField("Email", false),
-          _styledTextField("First Name", false),
-          _styledTextField("Last Name", false),
-          _styledTextField("Username", false),
-          _styledTextField("Password", true),
-          _styledAuthButton("Register", () {}),
-          _styledAuthButton("Back", () {
-            setState(() {
-              pageState = 0;
-            });
-          })
-        ];
-        break;
-      default:
-        throw StateError("Invalid page state");
-    }
-
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: children,
-    );
   }
 }
 
@@ -155,54 +81,6 @@ class MainPage extends StatelessWidget {
             ],
           ),
           child: const NavBar()),
-    );
-  }
-}
-
-class NavBar extends StatefulWidget {
-  const NavBar({super.key});
-
-  @override
-  State<StatefulWidget> createState() => _NavBarState();
-}
-
-class _NavBarState extends State<NavBar> {
-  _NavBarState();
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 8),
-        child: GNav(
-            rippleColor: Colors.grey[300]!,
-            hoverColor: Colors.grey[100]!,
-            gap: 8,
-            activeColor: Colors.black,
-            iconSize: 24,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            duration: const Duration(milliseconds: 200),
-            tabBackgroundColor: Colors.grey[100]!,
-            color: Colors.black,
-            tabs: const [
-              GButton(
-                icon: Icons.movie,
-                text: 'Movies',
-              ),
-              GButton(
-                icon: Icons.theaters,
-                text: 'Theatres',
-              ),
-              GButton(
-                icon: Icons.search,
-                text: 'Search',
-              ),
-              GButton(
-                icon: Icons.account_box,
-                text: 'Profile',
-              )
-            ]),
-      ),
     );
   }
 }

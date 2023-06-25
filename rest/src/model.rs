@@ -56,12 +56,13 @@ pub struct FormUser {
     #[validate(length(min = 1, max = 50))]
     pub last_name: String,
     #[schema(example = "john.doe@example.com")]
-    #[validate(email, length(max = 150))]
+    #[validate(email, length(min = 1, max = 150))]
     pub email: String,
+    // TODO: implement validation for what usernames are entered
     #[schema(example = "john.doe")]
     #[validate(length(min = 8, max = 50))]
     pub username: String,
-    #[schema(example = "password_123_do_not_use")]
+    #[schema(example = "password_123")]
     #[validate(length(min = 12))]
     pub password: String,
 }
@@ -551,6 +552,11 @@ impl FromRequest for JwtClaims {
 
         let Ok(token) = token.to_str() else {
             return ready(Err(ErrorType::ServerError));
+        };
+
+        // Bearer $token
+        let Some(token) = token.split(" ").last().to_owned() else {
+            return ready(Err(ErrorType::Invalid));
         };
 
         ready(
