@@ -10,5 +10,6 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP NOT NULL DEFAULT now(),
     is_super_user BOOLEAN NOT NULL DEFAULT FALSE,
     is_activated BOOLEAN NOT NULL DEFAULT FALSE,
-    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    profile_picture BYTEA
 );

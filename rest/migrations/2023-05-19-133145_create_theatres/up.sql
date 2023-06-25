@@ -5,5 +5,7 @@ CREATE TABLE IF NOT EXISTS theatres (
     "name" VARCHAR(50) NOT NULL,
     location_lat FLOAT NOT NULL,
     location_lon FLOAT NOT NULL,
-    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    logo_image BYTEA,
+    cover_image BYTEA
 );

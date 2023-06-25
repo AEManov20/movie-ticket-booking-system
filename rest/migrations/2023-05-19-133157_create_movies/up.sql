@@ -8,5 +8,6 @@ CREATE TABLE IF NOT EXISTS movies (
     release_date DATE NOT NULL,
     "length" FLOAT NOT NULL,
     imdb_link VARCHAR(250),
-    is_deleted BOOLEAN NOT NULL DEFAULT FALSE
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    poster_image BYTEA
 );
