@@ -35,6 +35,8 @@ pub struct User {
     pub is_activated: bool,
     #[serde(skip)]
     pub is_deleted: bool,
+    #[serde(skip)]
+    pub profile_picture: Option<Vec<u8>>
 }
 
 #[derive(Selectable, Identifiable, Queryable, Debug, Serialize, Clone, AsChangeset, ToSchema)]
@@ -256,6 +258,12 @@ pub struct Theatre {
     #[diesel(sql_type = diesel::sql_types::Bool)]
     #[serde(skip)]
     pub is_deleted: bool,
+    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Binary>)]
+    #[serde(skip)]
+    pub logo_image: Option<Vec<u8>>,
+    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Binary>)]
+    #[serde(skip)]
+    pub cover_image: Option<Vec<u8>>,
 }
 
 #[derive(Insertable, Deserialize, AsChangeset, Validate, ToSchema)]
@@ -283,6 +291,8 @@ pub struct Movie {
     pub imdb_link: Option<String>,
     #[serde(skip)]
     pub is_deleted: bool,
+    #[serde(skip)]
+    pub poster_image: Option<Vec<u8>>
 }
 
 #[derive(Selectable, Identifiable, Queryable, Debug, Serialize, Clone, AsChangeset, ToSchema)]
