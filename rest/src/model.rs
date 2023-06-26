@@ -35,8 +35,7 @@ pub struct User {
     pub is_activated: bool,
     #[serde(skip)]
     pub is_deleted: bool,
-    #[serde(skip)]
-    pub profile_picture_url: String
+    pub profile_picture_url: Option<String>
 }
 
 #[derive(Selectable, Identifiable, Queryable, Debug, Serialize, Clone, AsChangeset, ToSchema)]
@@ -47,7 +46,7 @@ pub struct PartialUser {
     pub last_name: String,
     pub username: String,
     pub is_super_user: bool,
-    pub profile_picture_url: String
+    pub profile_picture_url: Option<String>
 }
 
 #[derive(Deserialize, Debug, Clone, Validate, ToSchema, IntoParams)]
@@ -69,7 +68,7 @@ pub struct FormUser {
     #[validate(length(min = 12))]
     pub password: String,
     #[validate(url)]
-    pub profile_picture_url: String,
+    pub profile_picture_url: Option<String>,
 }
 
 #[derive(Deserialize, AsChangeset, Debug, Clone, Validate, ToSchema, IntoParams)]
@@ -88,7 +87,7 @@ pub struct UpdateUser {
     #[validate(length(min = 8, max = 50))]
     pub username: String,
     #[validate(url)]
-    pub profile_picture_url: String,
+    pub profile_picture_url: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone, Validate, IntoParams, ToSchema)]
@@ -264,9 +263,9 @@ pub struct Theatre {
     #[serde(skip)]
     pub is_deleted: bool,
     #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Varchar>)]
-    pub logo_image_url: String,
+    pub logo_image_url: Option<String>,
     #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Varchar>)]
-    pub cover_image_url: String,
+    pub cover_image_url: Option<String>,
 }
 
 #[derive(Insertable, Deserialize, AsChangeset, Validate, ToSchema)]
@@ -282,9 +281,9 @@ pub struct FormTheatre {
     #[validate(range(min = -90., max = 90.))]
     pub location_lat: f64,
     #[validate(url)]
-    pub logo_image_url: String,
+    pub logo_image_url: Option<String>,
     #[validate(url)]
-    pub cover_image_url: String,
+    pub cover_image_url: Option<String>,
 }
 
 #[derive(Selectable, Identifiable, Queryable, Serialize, Debug, Clone, AsChangeset, ToSchema)]
@@ -298,7 +297,7 @@ pub struct Movie {
     pub imdb_link: Option<String>,
     #[serde(skip)]
     pub is_deleted: bool,
-    pub poster_image_url: String
+    pub poster_image_url: Option<String>
 }
 
 #[derive(Selectable, Identifiable, Queryable, Debug, Serialize, Clone, AsChangeset, ToSchema)]
@@ -308,7 +307,7 @@ pub struct PartialMovie {
     pub name: String,
     pub genre: String,
     pub release_date: chrono::NaiveDate,
-    pub poster_image_url: String
+    pub poster_image_url: Option<String>
 }
 
 #[derive(Insertable, Deserialize, AsChangeset, Clone, Validate, ToSchema)]
@@ -330,7 +329,7 @@ pub struct FormMovie {
     #[validate(url, length(max = 250))]
     pub imdb_link: Option<String>,
     #[validate(url)]
-    pub poster_image_url: String
+    pub poster_image_url: Option<String>
 }
 
 #[derive(
