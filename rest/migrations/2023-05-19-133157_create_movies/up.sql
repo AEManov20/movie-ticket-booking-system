@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS movies (
     genre VARCHAR(250) NOT NULL,
     release_date DATE NOT NULL,
     "length" FLOAT NOT NULL,
-    imdb_link VARCHAR(250),
+    imdb_link VARCHAR(2048),
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    poster_image BYTEA
+    poster_image_url VARCHAR(2048)
 );

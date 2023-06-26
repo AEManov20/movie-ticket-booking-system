@@ -49,7 +49,7 @@ diesel::table! {
         length -> Float8,
         imdb_link -> Nullable<Varchar>,
         is_deleted -> Bool,
-        poster_image -> Nullable<Bytea>,
+        poster_image_url -> Nullable<Varchar>,
     }
 }
 
@@ -82,8 +82,8 @@ diesel::table! {
         location_lat -> Float8,
         location_lon -> Float8,
         is_deleted -> Bool,
-        logo_image -> Nullable<Bytea>,
-        cover_image -> Nullable<Bytea>,
+        logo_image_url -> Nullable<Varchar>,
+        cover_image_url -> Nullable<Varchar>,
     }
 }
 
@@ -127,7 +127,7 @@ diesel::table! {
         is_super_user -> Bool,
         is_activated -> Bool,
         is_deleted -> Bool,
-        profile_picture -> Nullable<Bytea>,
+        profile_picture_url -> Nullable<Varchar>,
     }
 }
 

@@ -11,5 +11,5 @@ CREATE TABLE IF NOT EXISTS users (
     is_super_user BOOLEAN NOT NULL DEFAULT FALSE,
     is_activated BOOLEAN NOT NULL DEFAULT FALSE,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    profile_picture BYTEA
+    profile_picture_url VARCHAR(2048)
 );
