@@ -8,8 +8,9 @@ pub mod language;
 use argon2::password_hash;
 use deadpool_diesel::{InteractError, PoolError};
 use either::Either;
-use lettre::address::AddressError;
+use lettre::{address::AddressError, Message};
 use serde::Deserialize;
+use tokio::sync::mpsc::error::SendError;
 use utoipa::{IntoParams, ToSchema};
 
 #[derive(Deserialize, Copy, Clone, ToSchema)]
@@ -31,7 +32,7 @@ pub enum DatabaseError {
     #[error("query did not execute properly")]
     Query(#[from] diesel::result::Error),
     #[error("something went wrong when sending an email")]
-    EmailSend(#[from] lettre::transport::smtp::Error),
+    EmailSend(#[from] SendError<Message>),
     #[error("something went wrong when building an email")]
     EmailBuild(Either<AddressError, lettre::error::Error>),
     #[error("{}", .0)]

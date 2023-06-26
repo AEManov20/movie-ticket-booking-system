@@ -7,13 +7,17 @@ mod util;
 mod vars;
 
 mod doc;
+mod mailer;
+
+use std::sync::Arc;
 
 use actix_web::{error::ErrorImATeapot, web, App, HttpResponse, HttpServer};
-use lettre::{transport::smtp::authentication::Credentials, SmtpTransport};
+use mailer::Mailer;
 use services::{
     bridge_role::BridgeRoleService, language::LanguageService, movie::MovieService,
     role::RoleService, theatre::TheatreService, user::UserService,
 };
+use tokio::sync::Mutex;
 use util::{get_connection_pool, hash_mock_passwords};
 use utoipa::OpenApi;
 use utoipa_swagger_ui::{SwaggerUi, Url};
@@ -37,30 +41,41 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let role_service = RoleService::new(pool.clone());
     let language_service = LanguageService::new(pool.clone());
 
-    let mailer = SmtpTransport::relay("smtp.gmail.com")?
-        .credentials(Credentials::new(gmail_user().unwrap(), gmail_password().unwrap()))
-        .build();
+    let mailer = Arc::new(Mutex::new(Mailer::new(mailer::MailerConfig {
+        host: "smtp.gmail.com".to_string(),
+        port: None,
+        user: gmail_user().unwrap(),
+        password: gmail_password().unwrap(),
+    })));
 
-    HttpServer::new(move || {
-        App::new()
-            .wrap(actix_web::middleware::Logger::default())
-            .app_data(web::Data::new(movie_service.clone()))
-            .app_data(web::Data::new(theatre_service.clone()))
-            .app_data(web::Data::new(user_service.clone()))
-            .app_data(web::Data::new(bridge_role_service.clone()))
-            .app_data(web::Data::new(role_service.clone()))
-            .app_data(web::Data::new(language_service.clone()))
-            .app_data(web::Data::new(mailer.clone()))
-            .service(web::scope("/api/v1").configure(handlers::config))
-            .service(
-                SwaggerUi::new("/swagger-ui/{_:.*}")
-                    .url("/api-docs/openapi.json", doc::ApiDoc::openapi()),
-            )
-            .route("/", web::get().to(root_response))
-    })
-    .bind(("127.0.0.1", 8080))?
-    .run()
-    .await?;
+    mailer.lock().await.start().await;
+    
+    {
+        let mailer_clone = mailer.clone();
+
+        HttpServer::new(move || {
+            App::new()
+                .wrap(actix_web::middleware::Logger::default())
+                .app_data(web::Data::new(movie_service.clone()))
+                .app_data(web::Data::new(theatre_service.clone()))
+                .app_data(web::Data::new(user_service.clone()))
+                .app_data(web::Data::new(bridge_role_service.clone()))
+                .app_data(web::Data::new(role_service.clone()))
+                .app_data(web::Data::new(language_service.clone()))
+                .app_data(web::Data::new(mailer_clone.clone()))
+                .service(web::scope("/api/v1").configure(handlers::config))
+                .service(
+                    SwaggerUi::new("/swagger-ui/{_:.*}")
+                        .url("/api-docs/openapi.json", doc::ApiDoc::openapi()),
+                )
+                .route("/", web::get().to(root_response))
+        })
+            .bind(("127.0.0.1", 8080))?
+            .run()
+            .await?;
+    }
+
+    mailer.lock().await.stop().await;
 
     Ok(())
 }

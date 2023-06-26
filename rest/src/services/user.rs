@@ -1,25 +1,29 @@
 use crate::handlers::ErrorType;
+use crate::mailer::Mailer;
 use crate::util::JWT_ALGO;
 use deadpool_diesel::postgres::Pool;
 use diesel::associations::HasTable;
 use diesel::prelude::*;
 use diesel::result::Error::NotFound;
-use either::Either::{Left, self};
+use either::Either::{self, Left};
 use jsonwebtoken::Validation;
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header};
-use lettre::message::Mailbox;
 use lettre::message::header::ContentType;
+use lettre::message::Mailbox;
 use lettre::transport::smtp::response::Response;
-use lettre::{SmtpTransport, Address, Message, Transport};
-use std::str::FromStr;
+use lettre::{Address, Message, SmtpTransport, Transport};
 use rayon::prelude::*;
 use serde::Serialize;
+use std::str::FromStr;
 use utoipa::{ToResponse, ToSchema};
 
 use super::DatabaseError;
 use crate::model::*;
 use crate::password;
-use crate::vars::{jwt_email_secret, jwt_ticket_secret, jwt_user_secret, gmail_user, server_domain, server_port, server_protocol};
+use crate::vars::{
+    gmail_user, jwt_email_secret, jwt_ticket_secret, jwt_user_secret, server_domain, server_port,
+    server_protocol,
+};
 
 pub const EMAIL_CONFIRMATION_TOKEN_EXPIRY_DAYS: i64 = 1;
 pub const USER_TOKEN_EXPIRY_DAYS: i64 = 2;
@@ -243,7 +247,7 @@ impl UserResource {
         .claims)
     }
 
-    pub async fn send_email_jwt_url(&self, mailer: &SmtpTransport) -> Result<Response, DatabaseError> {
+    pub fn get_email_jwt_url(&self) -> Result<Message, DatabaseError> {
         let Some(from_address) = gmail_user() else {
             return Err(DatabaseError::Other("Problem building an email, because of gmail_user var missing".to_string()));
         };
@@ -260,7 +264,6 @@ impl UserResource {
             return Err(DatabaseError::Other("Problem building an email, because of server_protocol var missing".to_string()));
         };
 
-
         let token = self.create_email_jwt()?;
         let from_address = Address::from_str(&from_address)?;
         let to_address = Address::from_str(&self.user.email)?;
@@ -272,7 +275,7 @@ impl UserResource {
     <h2>If you weren't expecting this email, you can ignore it.</h2>
     "
         );
-    
+
         let email = Message::builder()
             .from(Mailbox::new(Some("Nice Movies".to_owned()), from_address))
             .to(Mailbox::new(None, to_address))
@@ -280,7 +283,7 @@ impl UserResource {
             .header(ContentType::TEXT_HTML)
             .body(body)?;
 
-        Ok(mailer.send(&email)?)
+        Ok(email)
     }
 
     pub async fn activate(&mut self) -> Result<(), DatabaseError> {
@@ -519,7 +522,7 @@ impl TicketResource {
             &jsonwebtoken::EncodingKey::from_secret(jwt_ticket_secret.as_bytes()),
         ) {
             Ok(v) => Ok(v),
-            Err(e) => Err(Either::Right(e))
+            Err(e) => Err(Either::Right(e)),
         }
     }
 

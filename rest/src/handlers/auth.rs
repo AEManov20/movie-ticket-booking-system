@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
 use super::*;
 use chrono::Utc;
@@ -6,13 +6,14 @@ use lettre::{
     message::{header::ContentType, Mailbox},
     Address, Message, SmtpTransport, Transport,
 };
+use tokio::sync::Mutex;
 
 use super::ErrorType;
 use crate::{
     doc,
     model::{FormUser, JwtType, LoginUser, User},
     services::user::{LoginResponse, UserResource, UserService},
-    vars::gmail_user,
+    vars::gmail_user, mailer::Mailer,
 };
 
 use utoipa::{IntoParams, ToSchema};
@@ -81,7 +82,7 @@ pub async fn login_user(
 pub async fn register_user(
     user: web::Json<FormUser>,
     user_service: web::Data<UserService>,
-    mailer_service: web::Data<SmtpTransport>,
+    mailer_service: web::Data<Arc<Mutex<Mailer>>>,
 ) -> Result<()> {
     user.validate()?;
 
@@ -95,9 +96,15 @@ pub async fn register_user(
 
     let user = user_service.create(user.into_inner()).await?;
 
-    user.send_email_jwt_url(&mailer_service.into_inner()).await?;
+    let message = user.get_email_jwt_url()?;
 
-    Ok(().into())
+    match mailer_service.into_inner().lock().await.queue_mail(message).await {
+        Ok(v) => Ok(v.into()),
+        Err(either::Either::Left(e)) => Err(ErrorType::Database(DatabaseError::EmailSend(e))),
+        Err(either::Either::Right(_)) => Err(ErrorType::Database(DatabaseError::Other(
+            "Mailing service isn't started".to_string(),
+        ))),
+    }
 }
 
 /// Marks an account as verified/activated, given that the email token is valid
