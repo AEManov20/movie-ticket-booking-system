@@ -134,27 +134,44 @@ pub async fn create_ticket(
     claims: JwtClaims,
 ) -> Result<Ticket> {
     let theatre_id = path.into_inner();
-    let (user_res, user) = user_res_from_jwt(&claims, &user_service).await?;
-
+    let (issuer_user_res, issuer_user) = user_res_from_jwt(&claims, &user_service).await?;
+    
     if let Some(owner_id) = query.owner_id {
-        if !user.is_super_user && owner_id != user.id {
+        if !issuer_user.is_super_user && owner_id != issuer_user.id {
             check_roles_or!(
                 [Role::TheatreOwner, Role::TicketManager],
-                user.id,
+                issuer_user.id,
                 theatre_id,
                 bridge_role_service,
                 role_service
             );
 
-            let Some(user_res) = user_service.get_by_id(owner_id).await? else {
+            let Some(receiver_user_res) = user_service.get_by_id(owner_id).await? else {
                 return Err(ErrorType::NotFound)
             };
 
-            return Ok(Ticket::from(user_res.create_ticket(new_ticket.into_inner()).await?).into());
+            return Ok(Ticket::from(
+                receiver_user_res
+                    .create_ticket(new_ticket.into_inner(), issuer_user.id)
+                    .await?,
+            )
+            .into());
         }
     }
 
-    Ok(Ticket::from(user_res.create_ticket(new_ticket.into_inner()).await?).into())
+    let owned_ticket_count = issuer_user_res
+        .get_tickets_count(Some(new_ticket.theatre_screening_id))
+        .await?;
+    if owned_ticket_count > 3 {
+        return Err(ErrorType::InsufficientPermission);
+    }
+
+    Ok(Ticket::from(
+        issuer_user_res
+            .create_ticket(new_ticket.into_inner(), issuer_user.id)
+            .await?,
+    )
+    .into())
 }
 
 #[utoipa::path(
@@ -242,7 +259,7 @@ pub async fn validate_and_mark(
 
     match state {
         true => ticket_res.mark_as_used().await?,
-        false => ticket_res.mark_as_unused().await?
+        false => ticket_res.mark_as_unused().await?,
     };
 
     Ok(().into())
@@ -254,6 +271,6 @@ pub fn config(cfg: &mut web::ServiceConfig) {
             .service(query_tickets)
             .service(create_ticket)
             .service(validate)
-            .service(validate_and_mark)
+            .service(validate_and_mark),
     );
 }

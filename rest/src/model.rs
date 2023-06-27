@@ -130,7 +130,6 @@ pub struct Ticket {
 pub struct FormTicket {
     pub theatre_screening_id: uuid::Uuid,
     pub ticket_type_id: uuid::Uuid,
-    pub issuer_user_id: uuid::Uuid,
     pub seat_row: i32,
     pub seat_column: i32,
 }

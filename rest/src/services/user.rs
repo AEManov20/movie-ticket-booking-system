@@ -1,3 +1,4 @@
+use crate::handlers::theatre::screening;
 use crate::handlers::ErrorType;
 use crate::mailer::Mailer;
 use crate::util::JWT_ALGO;
@@ -373,9 +374,32 @@ impl UserResource {
             .collect::<Vec<_>>())
     }
 
+    pub async fn get_tickets_count(
+        &self,
+        screening_id: Option<uuid::Uuid>,
+    ) -> Result<i64, DatabaseError> {
+        let conn = self.pool.get().await?;
+        let cloned_user = self.user.clone();
+
+        Ok(conn
+            .interact(move |conn| {
+                let mut query = Ticket::belonging_to(&cloned_user)
+                    .select(diesel::dsl::count(crate::schema::tickets::id))
+                    .into_boxed();
+
+                if let Some(sid) = screening_id {
+                    query = query.filter(crate::schema::tickets::theatre_screening_id.eq(sid));
+                }
+
+                query.first(conn)
+            })
+            .await??)
+    }
+
     pub async fn create_ticket(
         &self,
         new_ticket: FormTicket,
+        issuer_user_id: uuid::Uuid,
     ) -> Result<TicketResource, DatabaseError> {
         let conn = self.pool.get().await?;
 
@@ -383,7 +407,7 @@ impl UserResource {
             owner_user_id: self.user.id,
             theatre_screening_id: new_ticket.theatre_screening_id,
             ticket_type_id: new_ticket.ticket_type_id,
-            issuer_user_id: new_ticket.issuer_user_id,
+            issuer_user_id,
             seat_row: new_ticket.seat_row,
             seat_column: new_ticket.seat_column,
         };

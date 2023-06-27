@@ -1,6 +1,5 @@
 import 'package:api/api.dart';
 import 'package:flutter/material.dart';
-import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:internship_app/adapters/movie.dart';
 import 'package:internship_app/adapters/theatre.dart';
@@ -46,11 +45,10 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        theme: ThemeData(
-          fontFamily: "FiraSans",
-          colorSchemeSeed: const Color(0xff6750a4),
-          useMaterial3: true,
-        ),
+        darkTheme: ThemeData(
+            fontFamily: "FiraSans",
+            colorScheme: const ColorScheme.dark(primary: Color(0xff6750a4)),
+            useMaterial3: true),
         themeMode: ThemeMode.dark,
         home: ValueListenableBuilder(
           valueListenable: Hive.box(userBox).listenable(keys: ['auth']),
@@ -63,13 +61,41 @@ class MainApp extends StatelessWidget {
   }
 }
 
+class MovieCard extends StatelessWidget {
+  const MovieCard({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.fromLTRB(0, 0, 0, 20),
+      elevation: 5,
+      child: SizedBox(width: 200, height: 300),
+    );
+  }
+}
+
 class MainPage extends StatelessWidget {
   const MainPage({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(),
+      body: SizedBox(
+          height: MediaQuery.of(context).size.height,
+          width: MediaQuery.of(context).size.width,
+          child: ListView(
+            shrinkWrap: true,
+            scrollDirection: Axis.vertical,
+            children: [
+              // Expanded(
+              //   child: ListView(
+              //     shrinkWrap: true,
+              //     scrollDirection: Axis.horizontal,
+              //     children: [for (int i = 0; i < 1; i++) MovieCard()],
+              //   ),
+              // )
+            ],
+          )),
       bottomNavigationBar: Container(
           decoration: BoxDecoration(
             color: Colors.white,
