@@ -4,6 +4,10 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:internship_app/adapters/movie.dart';
 import 'package:internship_app/adapters/theatre.dart';
 import 'package:internship_app/adapters/user.dart';
+import 'package:internship_app/pages/movie_browser.dart';
+import 'package:internship_app/pages/self.dart';
+import 'package:internship_app/pages/theatre_browser.dart';
+import 'package:internship_app/pages/tickets.dart';
 import 'package:internship_app/scaffolds/auth.dart';
 import 'package:internship_app/widgets/navbar.dart';
 import 'package:openapi_generator_annotations/openapi_generator_annotations.dart';
@@ -74,8 +78,36 @@ class MovieCard extends StatelessWidget {
   }
 }
 
-class MainPage extends StatelessWidget {
+class MainPage extends StatefulWidget {
   const MainPage({super.key});
+
+  @override
+  State<MainPage> createState() => _MainPageState();
+}
+
+class _MainPageState extends State<MainPage> {
+  int _pageIndex = 0;
+
+  _updatePageIndex(int index) {
+    setState(() {
+      _pageIndex = index;
+    });
+  }
+
+  Widget _pages() {
+    switch (_pageIndex) {
+      case 0:
+        return MovieBrowserPage();
+      case 1:
+        return TheatreBrowserPage();
+      case 2:
+        return TicketsPage();
+      case 3:
+        return SelfPage();
+      default:
+        return Center(child: Text("404"));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,19 +115,7 @@ class MainPage extends StatelessWidget {
       body: SizedBox(
           height: MediaQuery.of(context).size.height,
           width: MediaQuery.of(context).size.width,
-          child: ListView(
-            shrinkWrap: true,
-            scrollDirection: Axis.vertical,
-            children: [
-              // Expanded(
-              //   child: ListView(
-              //     shrinkWrap: true,
-              //     scrollDirection: Axis.horizontal,
-              //     children: [for (int i = 0; i < 1; i++) MovieCard()],
-              //   ),
-              // )
-            ],
-          )),
+          child: _pages()),
       bottomNavigationBar: Container(
           decoration: BoxDecoration(
             color: Colors.white,
@@ -106,7 +126,7 @@ class MainPage extends StatelessWidget {
               )
             ],
           ),
-          child: const NavBar()),
+          child: NavBar(onTabChange: _updatePageIndex, selectedIndex: _pageIndex,)),
     );
   }
 }

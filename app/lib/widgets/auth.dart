@@ -272,6 +272,7 @@ class _AuthButtonsState extends State<AuthButtons> {
     Widget child = TextFormField(
       controller: controller,
       validator: validator,
+      style: const TextStyle(backgroundColor: Color(0x00000000)),
       decoration: InputDecoration(
           border: const OutlineInputBorder(), label: Text(label)),
       obscureText: isSecret,
@@ -361,6 +362,16 @@ class _AuthButtonsState extends State<AuthButtons> {
 
 class ColorfulCircles extends CustomPainter {
   var circleColors = [Colors.red, Colors.green, Colors.blue];
+  // initial positions - target positions
+  var circlePositions = [
+    for (int i = 0; i < 3; i++)
+      [[Random().nextDouble(), Random().nextDouble()], [Random().nextDouble(), Random().nextDouble()]]
+  ];
+
+  var circleFlags = [
+    for (int i = 0; i < 3; i++)
+      [Random().nextBool(), Random().nextBool()]
+  ];
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -368,13 +379,11 @@ class ColorfulCircles extends CustomPainter {
         Paint()..color = Colors.blue);
 
     for (int i = 0; i < circleColors.length; i++) {
-      bool widthFlag = Random().nextBool();
-      bool heightFlag = Random().nextBool();
-      double dx = Random().nextDouble() * size.width;
-      double dy = Random().nextDouble() * size.height;
+      var dx = circlePositions[i][0][0] * size.height;
+      var dy = circlePositions[i][0][1] * size.height;
       canvas.drawCircle(
-          Offset(widthFlag ? size.width - dx : dx,
-              heightFlag ? size.height - dy : dy),
+          Offset(circleFlags[i][0] ? size.width - dx : dx,
+              circleFlags[i][1] ? size.height - dy : dy),
           25,
           Paint()..color = circleColors[i]);
     }
@@ -408,7 +417,7 @@ class ColorfulCircles extends CustomPainter {
   // from the constructor) then we would return true if any
   // of them differed from the same fields on the oldDelegate.
   @override
-  bool shouldRepaint(ColorfulCircles oldDelegate) => false;
+  bool shouldRepaint(ColorfulCircles oldDelegate) => true;
   @override
   bool shouldRebuildSemantics(ColorfulCircles oldDelegate) => false;
 }

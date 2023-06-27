@@ -1,31 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
 
-class NavBar extends StatefulWidget {
-  const NavBar({super.key});
+class NavBar extends StatelessWidget {
+  final ValueChanged<int>? onTabChange;
+  final int selectedIndex;
 
-  @override
-  State<StatefulWidget> createState() => _NavBarState();
-}
-
-class _NavBarState extends State<NavBar> {
-  _NavBarState();
+  const NavBar({super.key, this.onTabChange, this.selectedIndex = 0});
 
   @override
   Widget build(BuildContext context) {
     return SafeArea(
+        child: Container(
+      color: Colors.black,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 15.0, vertical: 8),
         child: GNav(
-            rippleColor: Colors.grey[300]!,
-            hoverColor: Colors.grey[100]!,
+            rippleColor: Colors.black26,
+            hoverColor: Colors.black12,
             gap: 8,
-            activeColor: Colors.black,
+            activeColor: Colors.white,
+            selectedIndex: selectedIndex,
             iconSize: 24,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
             duration: const Duration(milliseconds: 200),
-            tabBackgroundColor: Colors.grey[100]!,
-            color: Colors.black,
+            tabBackgroundColor: Color(0xff111111),
+            color: Colors.white,
+            onTabChange: onTabChange,
             tabs: const [
               GButton(
                 icon: Icons.movie,
@@ -36,8 +36,8 @@ class _NavBarState extends State<NavBar> {
                 text: 'Theatres',
               ),
               GButton(
-                icon: Icons.search,
-                text: 'Search',
+                icon: Icons.add_circle,
+                text: 'Tickets',
               ),
               GButton(
                 icon: Icons.account_box,
@@ -45,6 +45,6 @@ class _NavBarState extends State<NavBar> {
               )
             ]),
       ),
-    );
+    ));
   }
 }

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
-class MovieBrowser extends StatelessWidget {
-  const MovieBrowser({super.key});
+class MovieBrowserPage extends StatelessWidget {
+  const MovieBrowserPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // TODO: implement build
-    throw UnimplementedError();
+    return Center(child: Text("Movie browser!"));
   }
 }
