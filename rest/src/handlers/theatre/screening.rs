@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use chrono::{Datelike, Utc};
+use chrono::{Datelike, Utc, NaiveTime};
 use utoipa::IntoParams;
 use validator::ValidationError;
 
@@ -12,15 +12,15 @@ use super::*;
 
 #[derive(Deserialize, IntoParams)]
 pub struct TimelineQuery {
-    pub start_date: chrono::DateTime<Utc>,
-    pub end_date: Option<chrono::DateTime<Utc>>,
+    pub start_date: chrono::NaiveDate,
+    pub end_date: Option<chrono::NaiveDate>,
 }
 
 // TODO: implement verbose validation error messages
 fn validate_timeline_query(query: &TimelineQuery) -> std::result::Result<(), ValidationErrors> {
     let now = Utc::now();
 
-    if now.date_naive() > query.start_date.date_naive() {
+    if now.date_naive() > query.start_date {
         return Err(ValidationErrors::new());
     }
 
@@ -60,10 +60,14 @@ pub async fn get_timeline(
         return Err(ErrorType::NotFound)
     };
 
+    let Some(null_time) = NaiveTime::from_hms_opt(0, 0, 0) else {
+        return Err(ErrorType::ServerError)
+    };
+
     Ok(theatre_res
         .query_screening_events(
-            query.start_date.naive_utc(),
-            query.end_date.map(|x| x.naive_utc()),
+            query.start_date.and_time(null_time),
+            query.end_date.map(|x| x.and_time(null_time)),
         )
         .await?
         .into())

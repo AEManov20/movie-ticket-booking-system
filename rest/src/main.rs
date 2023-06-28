@@ -55,6 +55,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         HttpServer::new(move || {
             App::new()
+                // TODO: possibly vulnerable, because it allows everything
+                .wrap(actix_cors::Cors::permissive())
                 .wrap(actix_web::middleware::Logger::default())
                 .app_data(web::Data::new(movie_service.clone()))
                 .app_data(web::Data::new(theatre_service.clone()))

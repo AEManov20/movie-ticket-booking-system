@@ -60,31 +60,20 @@ impl TheatreService {
         })
     }
 
-    pub async fn get_by_name(
-        &self,
-        name_: String,
-    ) -> Result<Option<TheatreResource>, DatabaseError> {
+    pub async fn get_by_name(&self, name_: String) -> Result<Vec<TheatreResource>, DatabaseError> {
         use crate::schema::theatres::dsl::*;
 
         let conn = self.pool.get().await?;
 
-        let Some(theatre) = conn
-            .interact(|conn| {
-                theatres
-                    .filter(name.eq(name_))
-                    .limit(1)
-                    .load::<Theatre>(conn)
-            })
+        Ok(conn
+            .interact(|conn| theatres.filter(name.like(name_)).load::<Theatre>(conn))
             .await??
-            .first()
-            .cloned() else {
-                return Ok(None)
-            };
-
-        Ok(Some(TheatreResource {
-            theatre,
-            pool: self.pool.clone(),
-        }))
+            .iter()
+            .map(|theatre| TheatreResource {
+                pool: self.pool.clone(),
+                theatre: theatre.to_owned(),
+            })
+            .collect::<_>())
     }
 
     pub async fn get_by_id(
@@ -111,7 +100,7 @@ impl TheatreService {
 
     pub async fn get_nearby(&self, location: Point) -> Result<Vec<Theatre>, DatabaseError> {
         let conn = self.pool.get().await?;
-        
+
         // very unsafe code below
         Ok(conn.interact(move |conn| {
             diesel::sql_query("SELECT id, name, location_lat, location_lon, is_deleted FROM public.theatres WHERE ($1 - location_lat) * ($1 - location_lat) + ($2 - location_lon) * ($2 - location_lon) < $3")

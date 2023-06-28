@@ -34,6 +34,7 @@ impl Modify for AuthAddon {
         handlers::theatre::update_theatre,
         handlers::theatre::delete_theatre,
         handlers::theatre::get_nearby,
+        handlers::theatre::search_by_name,
         handlers::theatre::hall::get_halls,
         handlers::theatre::hall::create_hall,
         handlers::theatre::hall::delete_hall,

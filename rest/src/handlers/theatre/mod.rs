@@ -1,6 +1,8 @@
+use utoipa::IntoParams;
+
 use crate::{
     check_roles_or, doc,
-    model::{FormTheatre, Role, Theatre, Point},
+    model::{FormTheatre, Point, Role, Theatre},
     services::{bridge_role::*, role::*, theatre::*},
 };
 
@@ -11,6 +13,11 @@ pub mod role;
 pub mod screening;
 pub mod ticket;
 pub mod ticket_type;
+
+#[derive(Deserialize, IntoParams)]
+pub struct TheatreSearchQuery {
+    pub name: String,
+}
 
 /// Creates a new theatre (superuser only)
 #[utoipa::path(
@@ -154,14 +161,40 @@ pub async fn delete_theatre(
 #[get("/available")]
 pub async fn get_nearby(
     theatre_service: web::Data<TheatreService>,
-    location: web::Query<Point>
+    location: web::Query<Point>,
 ) -> Result<Vec<Theatre>> {
-    Ok(theatre_service.get_nearby(location.into_inner()).await?.into())
+    Ok(theatre_service
+        .get_nearby(location.into_inner())
+        .await?
+        .into())
+}
+
+#[utoipa::path(
+    context_path = "/api/v1/theatre",
+    params(TheatreSearchQuery),
+    responses(
+        (status = "5XX", description = "Internal server error has occurred (database/misc)"),
+        (status = OK, description = "No errors occurred and the query returned", body = Vec<Theatre>)
+    )
+)]
+#[get("/search")]
+pub async fn search_by_name(
+    theatre_service: web::Data<TheatreService>,
+    query: web::Query<TheatreSearchQuery>,
+) -> Result<Vec<Theatre>> {
+    Ok(theatre_service
+        .get_by_name(query.name.clone())
+        .await?
+        .iter()
+        .map(|t| Theatre::from(t.to_owned()))
+        .collect::<Vec<Theatre>>()
+        .into())
 }
 
 pub fn config(cfg: &mut web::ServiceConfig) {
     cfg.service(
         web::scope("/theatre")
+            .service(search_by_name)
             .service(get_nearby)
             .service(new_theatre)
             .service(get_theatre)
