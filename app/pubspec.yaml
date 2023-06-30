@@ -45,6 +45,7 @@ dependencies:
   path_provider: ^2.0.15
   carousel_slider: ^4.2.1
   geolocator: ^9.0.2
+  async: ^2.11.0
 
 dev_dependencies:
   flutter_test:

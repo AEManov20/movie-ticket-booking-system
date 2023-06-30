@@ -69,7 +69,7 @@ impl MovieService {
                     .into_boxed();
 
                 if let Some(name_) = name_ {
-                    query = query.filter(name.like(name_));
+                    query = query.filter(name.ilike(format!("%{name_}%")));
                 }
 
                 query = match sort_by {

@@ -89,9 +89,9 @@ impl TheatreService {
         let conn = self.pool.get().await?;
 
         Ok(conn
-            .interact(|conn| {
+            .interact(move |conn| {
                 theatres_with_counts!()
-                    .filter(theatres::name.like(name))
+                    .filter(theatres::name.ilike(format!("%{name}%")))
                     .load(conn)
             })
             .await??)
@@ -138,8 +138,11 @@ impl TheatreService {
             .cloned())
     }
 
-    pub async fn get_nearby_extended(&self, location: Point) -> Result<Vec<ExtendedTheatre>, DatabaseError> {
-        const DISTANCE: f64 = 0.25;
+    pub async fn get_nearby_extended(
+        &self,
+        location: Point,
+    ) -> Result<Vec<ExtendedTheatre>, DatabaseError> {
+        const DISTANCE: f64 = 0.5;
         use crate::schema::*;
 
         let conn = self.pool.get().await?;
