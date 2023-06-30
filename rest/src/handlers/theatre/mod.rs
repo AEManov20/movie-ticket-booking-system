@@ -2,7 +2,7 @@ use utoipa::IntoParams;
 
 use crate::{
     check_roles_or, doc,
-    model::{FormTheatre, Point, Role, Theatre},
+    model::{FormTheatre, Point, Role, Theatre, ExtendedTheatre},
     services::{bridge_role::*, role::*, theatre::*},
 };
 
@@ -55,17 +55,17 @@ pub async fn new_theatre(
     responses(
         (status = "5XX", description = "Internal server error has occurred (database/misc)"),
         (status = NOT_FOUND, description = "Occurs when given ID wasn't found in the database"),
-        (status = OK, description = "Resource was found and returned", body = Theatre)
+        (status = OK, description = "Resource was found and returned", body = ExtendedTheatre)
     )
 )]
 #[get("/{id}")]
 pub async fn get_theatre(
     path: web::Path<(uuid::Uuid,)>,
     theatre_service: web::Data<TheatreService>,
-) -> Result<Theatre> {
-    match theatre_service.get_by_id(path.0).await?.map(Theatre::from) {
+) -> Result<ExtendedTheatre> {
+    match theatre_service.get_by_id_extra(path.0).await? {
         Some(v) => Ok(v.into()),
-        None => Err(ErrorType::NotFound),
+        None => Err(ErrorType::NotFound)
     }
 }
 
@@ -155,16 +155,16 @@ pub async fn delete_theatre(
     params(Point),
     responses(
         (status = "5XX", description = "Internal server error has occurred (database/misc)"),
-        (status = OK, description = "No errors occurred and the query returned", body = Vec<Theatre>)
+        (status = OK, description = "No errors occurred and the query returned", body = Vec<ExtendedTheatre>)
     )
 )]
 #[get("/available")]
 pub async fn get_nearby(
     theatre_service: web::Data<TheatreService>,
     location: web::Query<Point>,
-) -> Result<Vec<Theatre>> {
+) -> Result<Vec<ExtendedTheatre>> {
     Ok(theatre_service
-        .get_nearby(location.into_inner())
+        .get_nearby_extended(location.into_inner())
         .await?
         .into())
 }
@@ -174,20 +174,17 @@ pub async fn get_nearby(
     params(TheatreSearchQuery),
     responses(
         (status = "5XX", description = "Internal server error has occurred (database/misc)"),
-        (status = OK, description = "No errors occurred and the query returned", body = Vec<Theatre>)
+        (status = OK, description = "No errors occurred and the query returned", body = Vec<ExtendedTheatre>)
     )
 )]
 #[get("/search")]
 pub async fn search_by_name(
     theatre_service: web::Data<TheatreService>,
     query: web::Query<TheatreSearchQuery>,
-) -> Result<Vec<Theatre>> {
+) -> Result<Vec<ExtendedTheatre>> {
     Ok(theatre_service
-        .get_by_name(query.name.clone())
+        .get_by_name_extra(query.name.clone())
         .await?
-        .iter()
-        .map(|t| Theatre::from(t.to_owned()))
-        .collect::<Vec<Theatre>>()
         .into())
 }
 

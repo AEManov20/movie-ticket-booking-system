@@ -78,7 +78,7 @@ impl Modify for AuthAddon {
         handlers::user::get_self_roles
     ),
     components(
-        schemas(UpdateMovieReview, UpdateUser, FormTicket, NewPasswordForm, PartialMovie, PartialMovieReview, ExtendedMovieReview, PartialUser, Ticket, User, SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
+        schemas(ExtendedTheatre, UpdateMovieReview, UpdateUser, FormTicket, NewPasswordForm, PartialMovie, PartialMovieReview, ExtendedMovieReview, PartialUser, Ticket, User, SortBy, LoginResponse, Language, MovieReview, Theatre, Movie, UserTheatreRole, Hall, TheatreScreening, TheatreScreeningEvent, TicketType, FormUser, FormTheatreScreening, FormHall, FormTheatre, FormMovie, FormTicketType, FormMovieReview, UserRoleForm, RoleUpdateAction, LoginUser, EmailVerificationQuery, MovieQuery, BridgeRoleQuery),
     ),
     modifiers(&AuthAddon)
 )]

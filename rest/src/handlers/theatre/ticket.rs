@@ -159,6 +159,8 @@ pub async fn create_ticket(
         }
     }
 
+    // TODO: implement check whether the ticket type belongs to the theatre
+
     let owned_ticket_count = issuer_user_res
         .get_tickets_count(Some(new_ticket.theatre_screening_id))
         .await?;

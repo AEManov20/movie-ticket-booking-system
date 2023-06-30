@@ -1,10 +1,32 @@
 use chrono::{NaiveDate, NaiveDateTime};
 use deadpool_diesel::postgres::Pool;
-use diesel::prelude::*;
+use diesel::{dsl::count_distinct, pg::Pg, prelude::*};
 use rayon::prelude::*;
 
 use super::DatabaseError;
+use crate::schema::*;
 use crate::{model::*, services::user::TicketResource};
+
+macro_rules! theatres_with_counts {
+    () => {
+        theatres::table
+            .left_join(halls::table)
+            .left_join(theatre_screenings::table)
+            .left_join(tickets::table.on(theatre_screenings::id.eq(tickets::theatre_screening_id)))
+            .group_by(theatres::id)
+            .select((
+                theatres::id,
+                theatres::name,
+                theatres::location_lat,
+                theatres::location_lon,
+                theatres::logo_image_url,
+                theatres::cover_image_url,
+                count_distinct(theatre_screenings::id.nullable()),
+                count_distinct(halls::id.nullable()),
+                count_distinct(tickets::id.nullable()),
+            ))
+    };
+}
 
 #[derive(Clone)]
 pub struct TheatreService {
@@ -60,20 +82,19 @@ impl TheatreService {
         })
     }
 
-    pub async fn get_by_name(&self, name_: String) -> Result<Vec<TheatreResource>, DatabaseError> {
-        use crate::schema::theatres::dsl::*;
-
+    pub async fn get_by_name_extra(
+        &self,
+        name: String,
+    ) -> Result<Vec<ExtendedTheatre>, DatabaseError> {
         let conn = self.pool.get().await?;
 
         Ok(conn
-            .interact(|conn| theatres.filter(name.like(name_)).load::<Theatre>(conn))
-            .await??
-            .iter()
-            .map(|theatre| TheatreResource {
-                pool: self.pool.clone(),
-                theatre: theatre.to_owned(),
+            .interact(|conn| {
+                theatres_with_counts!()
+                    .filter(theatres::name.like(name))
+                    .load(conn)
             })
-            .collect::<_>())
+            .await??)
     }
 
     pub async fn get_by_id(
@@ -98,16 +119,44 @@ impl TheatreService {
         }))
     }
 
-    pub async fn get_nearby(&self, location: Point) -> Result<Vec<Theatre>, DatabaseError> {
+    pub async fn get_by_id_extra(
+        &self,
+        id_: uuid::Uuid,
+    ) -> Result<Option<ExtendedTheatre>, DatabaseError> {
+        use crate::schema::*;
+
         let conn = self.pool.get().await?;
 
-        // very unsafe code below
-        Ok(conn.interact(move |conn| {
-            diesel::sql_query("SELECT id, name, location_lat, location_lon, is_deleted FROM public.theatres WHERE ($1 - location_lat) * ($1 - location_lat) + ($2 - location_lon) * ($2 - location_lon) < $3")
-                .bind::<diesel::sql_types::Float8, _>(location.x)
-                .bind::<diesel::sql_types::Float8, _>(location.y)
-                .bind::<diesel::sql_types::Float8, _>(1f64).load::<Theatre>(conn)
-        }).await??)
+        Ok(conn
+            .interact(move |conn| {
+                theatres_with_counts!()
+                    .filter(theatres::id.eq(id_))
+                    .load::<ExtendedTheatre>(conn)
+            })
+            .await??
+            .first()
+            .cloned())
+    }
+
+    pub async fn get_nearby_extended(&self, location: Point) -> Result<Vec<ExtendedTheatre>, DatabaseError> {
+        const DISTANCE: f64 = 0.25;
+        use crate::schema::*;
+
+        let conn = self.pool.get().await?;
+
+        Ok(conn
+            .interact(move |conn| {
+                theatres_with_counts!()
+                    .filter(
+                        ((theatres::location_lat - location.y)
+                            * (theatres::location_lat - location.y)
+                            + (theatres::location_lon - location.x)
+                                * (theatres::location_lon - location.x))
+                            .lt(DISTANCE),
+                    )
+                    .load(conn)
+            })
+            .await??)
     }
 
     pub async fn delete(&self, id_: uuid::Uuid) -> Result<(), DatabaseError> {

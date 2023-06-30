@@ -250,21 +250,27 @@ pub struct CreateHall {
 
 #[derive(Selectable, Identifiable, Queryable, QueryableByName, Serialize, Debug, Clone, AsChangeset, ToSchema)]
 pub struct Theatre {
-    #[diesel(sql_type = diesel::sql_types::Uuid)]
     pub id: uuid::Uuid,
-    #[diesel(sql_type = diesel::sql_types::Varchar)]
     pub name: String,
-    #[diesel(sql_type = diesel::sql_types::Float8)]
     pub location_lat: f64,
-    #[diesel(sql_type = diesel::sql_types::Float8)]
     pub location_lon: f64,
-    #[diesel(sql_type = diesel::sql_types::Bool)]
     #[serde(skip)]
     pub is_deleted: bool,
-    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Varchar>)]
     pub logo_image_url: Option<String>,
-    #[diesel(sql_type = diesel::sql_types::Nullable<diesel::sql_types::Varchar>)]
     pub cover_image_url: Option<String>,
+}
+
+#[derive(Serialize, Queryable, Clone, ToSchema)]
+pub struct ExtendedTheatre {
+    pub id: uuid::Uuid,
+    pub name: String,
+    pub location_lat: f64,
+    pub location_lon: f64,
+    pub logo_image_url: Option<String>,
+    pub cover_image_url: Option<String>,
+    pub screenings_count: i64,
+    pub halls_count: i64,
+    pub tickets_count: i64,
 }
 
 #[derive(Insertable, Deserialize, AsChangeset, Validate, ToSchema)]
