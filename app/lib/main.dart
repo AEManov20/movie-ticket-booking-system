@@ -57,9 +57,30 @@ class MainApp extends StatelessWidget {
         home: ValueListenableBuilder(
           valueListenable: Hive.box(userBox).listenable(keys: ['auth']),
           builder: (context, value, child) {
-            return value.get('auth') == null
+            var auth = value.get('auth');
+            return auth == null
                 ? const AuthScaffold()
-                : const MainPage();
+                : FutureBuilder(
+                    future: HandlersuserApi(ApiClient(
+                            basePath: baseApiPath,
+                            authentication: OAuth(accessToken: auth)))
+                        .getSelfUser(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData && snapshot.data != null) {
+                        return const MainPage();
+                      } else if (snapshot.hasError) {
+                        return const AuthScaffold();
+                      } else {
+                        return const Scaffold(
+                            body: Center(
+                                child: Text(
+                          "Authenticating...",
+                          style: TextStyle(
+                              fontSize: 35, fontWeight: FontWeight.bold),
+                        )));
+                      }
+                    },
+                  );
           },
         ));
   }
@@ -126,7 +147,10 @@ class _MainPageState extends State<MainPage> {
               )
             ],
           ),
-          child: NavBar(onTabChange: _updatePageIndex, selectedIndex: _pageIndex,)),
+          child: NavBar(
+            onTabChange: _updatePageIndex,
+            selectedIndex: _pageIndex,
+          )),
     );
   }
 }
