@@ -1,4 +1,5 @@
 import 'package:api/api.dart';
+import 'package:async/async.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:flutter/material.dart';
 import 'package:internship_app/main.dart';
@@ -51,11 +52,11 @@ class TheatreBrowserPage extends StatefulWidget {
 class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
   // TODO: please remember to update this
   bool chosenTheatreDidUpdate = false;
-  Future<Theatre?>? chosenTheatre;
+  ExtendedTheatre? chosenTheatre;
   DateTime? chosenDate;
 
-  Future<List<Theatre>?>? searchTheatres;
-  Future<List<Theatre>?>? nearbyTheatres;
+  CancelableOperation<List<ExtendedTheatre>?>? searchTheatres;
+  Future<List<ExtendedTheatre>?>? nearbyTheatres;
   Future<List<TheatreScreeningEvent>?>? screeningTimeline;
 
   CarouselController buttonCarouselController = CarouselController();
@@ -63,10 +64,15 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
   // HandlerstheatreApi(ApiClient(basePath: baseApiPath))
   //       .searchByName(name);
 
-  Future<List<Theatre>?> _fetchNearbyTheatres() async {
+  Future<List<ExtendedTheatre>?> _fetchNearbyTheatres() async {
     var location = await _determinePosition();
     return HandlerstheatreApi(ApiClient(basePath: baseApiPath))
-        .getNearby(location.longitude, location.latitude);
+        .getNearby(location.latitude, location.longitude);
+  }
+
+  Future<List<ExtendedTheatre>?> _queryTheatresByName(String name) {
+    return HandlerstheatreApi(ApiClient(basePath: baseApiPath))
+        .searchByName(name);
   }
 
   @override
@@ -77,7 +83,7 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
   }
 
   @override
-  void didUpdateWidget(covariant TheatreBrowserPage oldWidget) async {
+  void didUpdateWidget(covariant TheatreBrowserPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     // if (chosenTheatreId != null && chosenTheatreDidUpdate) {
     //   if (chosenDate != null) {
@@ -101,17 +107,114 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
   }
 
   Widget _widgetWithPadding(Widget child) {
-    return Padding(padding: EdgeInsets.all(10), child: child);
+    return Padding(padding: const EdgeInsets.all(10), child: child);
+  }
+
+  Widget _theatresGrid(List<ExtendedTheatre> list) {
+    return GridView.count(
+        crossAxisCount: 2,
+        children: list
+            .map((e) => GestureDetector(
+                onTap: () {
+                  print('tapped a theatre.');
+                  setState(() {
+                    chosenTheatre = e;
+                  });
+                },
+                child: Card(
+                    child: Column(children: [
+                  ListTile(title: Text(e.name)),
+                  ListTile(
+                      leading: const Icon(Icons.airplane_ticket),
+                      title: Text("${e.ticketsCount.toString()} ticket(s)")),
+                  ListTile(
+                      leading: const Icon(Icons.room),
+                      title: Text("${e.hallsCount} hall(s)")),
+                  ListTile(
+                      leading: const Icon(Icons.local_movies),
+                      title: Text("${e.screeningsCount} screening(s)"))
+                ]))))
+            .toList());
   }
 
   Widget _theatreView() {
     return Column(
       children: [
         _widgetWithPadding(TextField(
-          decoration: InputDecoration(
-              border: const OutlineInputBorder(), label: Text("Search movies")),
+          onChanged: (value) {
+            if (searchTheatres != null) {
+              setState(() {
+                searchTheatres!.cancel();
+              });
+            }
+
+            if (value.isEmpty) {
+              setState(() {
+                searchTheatres = null;
+              });
+            } else {
+              setState(() {
+                var cancelled = false;
+
+                // debouncing magic with CancelableOperation :)
+                searchTheatres = CancelableOperation.fromFuture(() async {
+                  await Future.delayed(const Duration(milliseconds: 250));
+                  if (cancelled) return <ExtendedTheatre>[];
+                  return await _queryTheatresByName(value);
+                }(), onCancel: () {
+                  cancelled = true;
+                });
+              });
+            }
+          },
+          decoration: const InputDecoration(
+              border: OutlineInputBorder(), label: Text("Search theatres")),
         )),
-        Expanded(child: Center(child: Text("Nearby theatres view")))
+        Expanded(child: _widgetWithPadding((() {
+          if (searchTheatres != null) {
+            return FutureBuilder(
+              future: searchTheatres!.value,
+              builder: (context, snapshot) {
+                if (snapshot.hasData && snapshot.data != null) {
+                  return _theatresGrid(snapshot.data!);
+                } else if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      children: [
+                        const Icon(Icons.error),
+                        Center(child: Text(snapshot.error.toString()))
+                      ],
+                    ),
+                  );
+                } else {
+                  return Container();
+                }
+              },
+            );
+          } else if (nearbyTheatres != null) {
+            return FutureBuilder<List<ExtendedTheatre>?>(
+                future: nearbyTheatres,
+                builder: (context, snapshot) {
+                  if (snapshot.hasData && snapshot.data != null) {
+                    return _theatresGrid(snapshot.data!);
+                  } else if (snapshot.hasError) {
+                    return Center(
+                      child: Column(
+                        children: [
+                          const Icon(Icons.location_disabled),
+                          Center(child: Text(snapshot.error.toString()))
+                        ],
+                      ),
+                    );
+                  } else {
+                    return Container();
+                  }
+                });
+          } else {
+            return const Center(
+                child: Text("Nearby Theatres future not present."));
+          }
+        })()))
       ],
     );
   }
@@ -127,8 +230,8 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
                   child: _widgetWithPadding(Container(
                 decoration: BoxDecoration(
                     color: Colors.grey[900]!,
-                    borderRadius: BorderRadius.all(Radius.circular(10))),
-                margin: EdgeInsets.all(5),
+                    borderRadius: const BorderRadius.all(Radius.circular(10))),
+                margin: const EdgeInsets.all(5),
               ))),
               Expanded(
                   child: _widgetWithPadding(Row(
@@ -139,8 +242,8 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
                         decoration: BoxDecoration(
                             color: Colors.grey[900]!,
                             borderRadius:
-                                BorderRadius.all(Radius.circular(10))),
-                        margin: EdgeInsets.all(5),
+                                const BorderRadius.all(Radius.circular(10))),
+                        margin: const EdgeInsets.all(5),
                       ),
                     )
                 ],
