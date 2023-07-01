@@ -12,15 +12,15 @@ use super::*;
 
 #[derive(Deserialize, IntoParams)]
 pub struct TimelineQuery {
-    pub start_date: chrono::NaiveDate,
-    pub end_date: Option<chrono::NaiveDate>,
+    pub start_date: chrono::DateTime<Utc>,
+    pub end_date: Option<chrono::DateTime<Utc>>,
 }
 
 // TODO: implement verbose validation error messages
 fn validate_timeline_query(query: &TimelineQuery) -> std::result::Result<(), ValidationErrors> {
     let now = Utc::now();
 
-    if now.date_naive() > query.start_date {
+    if now.date_naive() > query.start_date.date_naive() {
         return Err(ValidationErrors::new());
     }
 
@@ -66,8 +66,8 @@ pub async fn get_timeline(
 
     Ok(theatre_res
         .query_screening_events(
-            query.start_date.and_time(null_time),
-            query.end_date.map(|x| x.and_time(null_time)),
+            query.start_date.date_naive().and_time(null_time),
+            query.end_date.map(|x| x.date_naive().and_time(null_time)),
         )
         .await?
         .into())

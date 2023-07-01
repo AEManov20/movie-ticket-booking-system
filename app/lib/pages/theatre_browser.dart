@@ -1,6 +1,7 @@
 import 'package:api/api.dart';
 import 'package:async/async.dart';
 import 'package:carousel_slider/carousel_slider.dart';
+import 'package:date_picker_timeline/date_picker_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:internship_app/main.dart';
 import 'package:geolocator/geolocator.dart';
@@ -50,8 +51,6 @@ class TheatreBrowserPage extends StatefulWidget {
 }
 
 class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
-  // TODO: please remember to update this
-  bool chosenTheatreDidUpdate = false;
   ExtendedTheatre? chosenTheatre;
   DateTime? chosenDate;
 
@@ -59,10 +58,14 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
   Future<List<ExtendedTheatre>?>? nearbyTheatres;
   Future<List<TheatreScreeningEvent>?>? screeningTimeline;
 
-  CarouselController buttonCarouselController = CarouselController();
+  CarouselController movieCarouselController = CarouselController();
+  CarouselController dateCarouselController = CarouselController();
 
-  // HandlerstheatreApi(ApiClient(basePath: baseApiPath))
-  //       .searchByName(name);
+  Future<List<TheatreScreeningEvent>?> _fetchScreenings(
+      String theatreId) async {
+    return HandlerstheatrescreeningApi(ApiClient(basePath: baseApiPath))
+        .getTimeline(theatreId, DateTime.now());
+  }
 
   Future<List<ExtendedTheatre>?> _fetchNearbyTheatres() async {
     var location = await _determinePosition();
@@ -116,28 +119,30 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
         children: list
             .map((e) => GestureDetector(
                 onTap: () {
-                  print('tapped a theatre.');
                   setState(() {
                     chosenTheatre = e;
+                    screeningTimeline = _fetchScreenings(chosenTheatre!.id);
                   });
                 },
                 child: Card(
+                    color: Colors.grey[900],
                     child: Column(children: [
-                  ListTile(title: Text(e.name)),
-                  ListTile(
-                      leading: const Icon(Icons.airplane_ticket),
-                      title: Text("${e.ticketsCount.toString()} ticket(s)")),
-                  ListTile(
-                      leading: const Icon(Icons.room),
-                      title: Text("${e.hallsCount} hall(s)")),
-                  ListTile(
-                      leading: const Icon(Icons.local_movies),
-                      title: Text("${e.screeningsCount} screening(s)"))
-                ]))))
+                      ListTile(title: Text(e.name)),
+                      ListTile(
+                          leading: const Icon(Icons.airplane_ticket),
+                          title:
+                              Text("${e.ticketsCount.toString()} ticket(s)")),
+                      ListTile(
+                          leading: const Icon(Icons.room),
+                          title: Text("${e.hallsCount} hall(s)")),
+                      ListTile(
+                          leading: const Icon(Icons.local_movies),
+                          title: Text("${e.screeningsCount} screening(s)"))
+                    ]))))
             .toList());
   }
 
-  Widget _theatreView() {
+  Widget _theatreView(BuildContext context) {
     return Column(
       children: [
         _widgetWithPadding(TextField(
@@ -219,7 +224,7 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
     );
   }
 
-  Widget _screeningView() {
+  Widget _screeningView(BuildContext context) {
     return Column(
       children: [
         Flexible(
@@ -231,22 +236,24 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
                 decoration: BoxDecoration(
                     color: Colors.grey[900]!,
                     borderRadius: const BorderRadius.all(Radius.circular(10))),
-                margin: const EdgeInsets.all(5),
               ))),
               Expanded(
-                  child: _widgetWithPadding(Row(
-                children: [
-                  for (int i = 0; i < 6; i++)
-                    Flexible(
-                      child: Container(
-                        decoration: BoxDecoration(
-                            color: Colors.grey[900]!,
-                            borderRadius:
-                                const BorderRadius.all(Radius.circular(10))),
-                        margin: const EdgeInsets.all(5),
-                      ),
-                    )
-                ],
+                  child: _widgetWithPadding(DatePicker(
+                DateTime.now(),
+                initialSelectedDate: DateTime.now(),
+                dayTextStyle:
+                    const TextStyle(fontSize: 10, color: Colors.white),
+                dateTextStyle:
+                    const TextStyle(fontSize: 30, color: Colors.white),
+                monthTextStyle:
+                    const TextStyle(fontSize: 10, color: Colors.white),
+                selectionColor: Colors.grey[900]!,
+                // exactly three weeks
+                daysCount: 7 * 3,
+                // i don't even know why i'm subtracting from 66
+                width: (MediaQuery.of(context).size.width - 66) / 7,
+                deactivatedColor: Colors.white,
+                selectedTextColor: Colors.white,
               )))
             ],
           ),
@@ -270,7 +277,7 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
                               borderRadius:
                                   BorderRadius.all(Radius.circular(30))))
                     ],
-                    carouselController: buttonCarouselController,
+                    carouselController: movieCarouselController,
                     options: CarouselOptions(
                       autoPlay: false,
                       enlargeCenterPage: true,
@@ -289,9 +296,9 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
   @override
   Widget build(BuildContext context) {
     if (chosenTheatre == null) {
-      return _theatreView();
+      return _theatreView(context);
     } else {
-      return _screeningView();
+      return _screeningView(context);
     }
   }
 }
