@@ -68,6 +68,7 @@ pub async fn get_timeline(
         .query_screening_events(
             query.start_date.date_naive().and_time(null_time),
             query.end_date.map(|x| x.date_naive().and_time(null_time)),
+            None
         )
         .await?
         .into())
@@ -244,6 +245,8 @@ pub async fn create_theatre_screening(
     role_service: web::Data<RoleService>,
     claims: JwtClaims,
 ) -> Result<TheatreScreening> {
+    // TODO: implement event overlap checks
+
     let theatre_id = path.into_inner();
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let Some(theatre_res) = theatre_service.get_by_id(theatre_id).await? else {

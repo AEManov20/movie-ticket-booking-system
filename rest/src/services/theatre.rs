@@ -1,4 +1,4 @@
-use chrono::{NaiveDate, NaiveDateTime, DateTime, Utc};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Utc};
 use deadpool_diesel::postgres::Pool;
 use diesel::{dsl::count_distinct, pg::Pg, prelude::*};
 use rayon::prelude::*;
@@ -14,6 +14,7 @@ macro_rules! theatres_with_counts {
             .left_join(theatre_screenings::table)
             .left_join(tickets::table.on(theatre_screenings::id.eq(tickets::theatre_screening_id)))
             .group_by(theatres::id)
+            .having(count_distinct(halls::id.nullable()).gt(0))
             .select((
                 theatres::id,
                 theatres::name,
@@ -142,7 +143,7 @@ impl TheatreService {
         &self,
         location: Point,
     ) -> Result<Vec<ExtendedTheatre>, DatabaseError> {
-        const DISTANCE: f64 = 0.5;
+        const DISTANCE: f64 = 16.;
         use crate::schema::*;
 
         let conn = self.pool.get().await?;
@@ -416,6 +417,7 @@ impl TheatreResource {
         &self,
         start_date: NaiveDateTime,
         end_date: Option<NaiveDateTime>,
+        hall_id: Option<uuid::Uuid>
     ) -> Result<Vec<TheatreScreeningEvent>, DatabaseError> {
         use crate::schema::*;
 
@@ -423,6 +425,7 @@ impl TheatreResource {
 
         let mut query = theatre_screenings::table
             .inner_join(movies::table)
+            .inner_join(halls::table)
             .filter(theatre_screenings::is_deleted.eq(false))
             .filter(movies::is_deleted.eq(false))
             .filter(theatre_screenings::theatre_id.eq(self.theatre.id))
@@ -438,6 +441,10 @@ impl TheatreResource {
 
         if let Some(end_date) = end_date {
             query = query.filter(theatre_screenings::starting_time.lt(end_date))
+        }
+
+        if let Some(hall_id) = hall_id {
+            query = query.filter(halls::id.eq(hall_id))
         }
 
         Ok(conn.interact(move |conn| query.load(conn)).await??)
