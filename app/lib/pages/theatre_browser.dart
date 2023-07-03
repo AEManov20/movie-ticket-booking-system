@@ -3,6 +3,7 @@ import 'package:async/async.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'package:date_picker_timeline/date_picker_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:internship_app/main.dart';
 import 'package:geolocator/geolocator.dart';
 
@@ -113,11 +114,22 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
     return Padding(padding: const EdgeInsets.all(10), child: child);
   }
 
-  Widget _theatresGrid(List<ExtendedTheatre> list) {
+  Widget _theatresGrid(BuildContext context, List<ExtendedTheatre> list) {
+    var messenger = ScaffoldMessenger.of(context);
+
     return GridView.count(
         crossAxisCount: 2,
         children: list
             .map((e) => GestureDetector(
+                onLongPress: () {
+                  var data =
+                      ClipboardData(text: "${e.locationLon}, ${e.locationLat}");
+                  Clipboard.setData(data);
+
+                  messenger.clearSnackBars();
+                  messenger.showSnackBar(const SnackBar(
+                      content: Text("Copied location to clipboard!")));
+                },
                 onTap: () {
                   setState(() {
                     chosenTheatre = e;
@@ -181,7 +193,7 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
               future: searchTheatres!.value,
               builder: (context, snapshot) {
                 if (snapshot.hasData && snapshot.data != null) {
-                  return _theatresGrid(snapshot.data!);
+                  return _theatresGrid(context, snapshot.data!);
                 } else if (snapshot.hasError) {
                   return Center(
                     child: Column(
@@ -201,7 +213,7 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
                 future: nearbyTheatres,
                 builder: (context, snapshot) {
                   if (snapshot.hasData && snapshot.data != null) {
-                    return _theatresGrid(snapshot.data!);
+                    return _theatresGrid(context, snapshot.data!);
                   } else if (snapshot.hasError) {
                     return Center(
                       child: Column(
@@ -244,7 +256,7 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
                 dayTextStyle:
                     const TextStyle(fontSize: 10, color: Colors.white),
                 dateTextStyle:
-                    const TextStyle(fontSize: 30, color: Colors.white),
+                    const TextStyle(fontSize: 25, color: Colors.white),
                 monthTextStyle:
                     const TextStyle(fontSize: 10, color: Colors.white),
                 selectionColor: Colors.grey[900]!,
