@@ -15,7 +15,7 @@ The premise of this project is to simplify booking tickets for movies worldwide,
    - **Server Implementor** - A cinema's server that has implemented said interfaces, protocols and formats
    - **Client Implementor** - A UI implementation for communicating with **Server Implementors**
  - Possible solution (pt. 3): Steps of operation:
-   - **Client Implementor** communicates with an **Index Implementor** to gather information about a cinema **Server Implementor**s (searching/querying can happen either by name, geolocation or other ways of identifying)
+   - **Client Implementor** communicates with an **Index Implementor** to gather information about cinema **Server Implementor(s)** (searching/querying can happen either by name, geolocation or other ways of identifying)
    ![clientindex-dark](./assets/client-index-dark.png#gh-dark-mode-only)
    ![clientindex-light](./assets/client-index-light.png#gh-light-mode-only)
    - Authorization with **Server Implementor** via agreed upon means.
