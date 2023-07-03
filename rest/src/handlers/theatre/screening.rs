@@ -25,7 +25,7 @@ fn validate_timeline_query(query: &TimelineQuery) -> std::result::Result<(), Val
     }
 
     if let Some(end_date) = query.end_date {
-        if end_date > query.start_date {
+        if end_date < query.start_date {
             return Err(ValidationErrors::new());
         }
     }
