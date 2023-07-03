@@ -236,6 +236,36 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
     );
   }
 
+  Widget _screeningInfo(BuildContext context) {
+    return Column(
+      children: [
+        _widgetWithPadding(Text("MOVIE TITLE",
+            style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold))),
+        Expanded(
+            child: Padding(
+          padding: EdgeInsets.fromLTRB(0, 10, 0, 10),
+          child: CarouselSlider(
+            items: [
+              Container(
+                  decoration: BoxDecoration(
+                      color: Colors.grey[900]!,
+                      borderRadius: BorderRadius.all(Radius.circular(30))))
+            ],
+            carouselController: movieCarouselController,
+            options: CarouselOptions(
+              onPageChanged: (index, reason) => print(index),
+              autoPlay: false,
+              enlargeCenterPage: true,
+              viewportFraction: 0.9,
+              aspectRatio: 4 / 5,
+              initialPage: 2,
+            ),
+          ),
+        ))
+      ],
+    );
+  }
+
   Widget _screeningView(BuildContext context) {
     return Column(
       children: [
@@ -271,36 +301,7 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
           ),
         ),
         Divider(color: Colors.grey[900]!),
-        Flexible(
-            flex: 3,
-            child: Column(
-              children: [
-                _widgetWithPadding(Text("MOVIE TITLE",
-                    style:
-                        TextStyle(fontSize: 30, fontWeight: FontWeight.bold))),
-                Expanded(
-                    child: Padding(
-                  padding: EdgeInsets.fromLTRB(0, 10, 0, 10),
-                  child: CarouselSlider(
-                    items: [
-                      Container(
-                          decoration: BoxDecoration(
-                              color: Colors.grey[900]!,
-                              borderRadius:
-                                  BorderRadius.all(Radius.circular(30))))
-                    ],
-                    carouselController: movieCarouselController,
-                    options: CarouselOptions(
-                      autoPlay: false,
-                      enlargeCenterPage: true,
-                      viewportFraction: 0.9,
-                      aspectRatio: 4 / 5,
-                      initialPage: 2,
-                    ),
-                  ),
-                ))
-              ],
-            ))
+        Flexible(flex: 3, child: _screeningInfo(context))
       ],
     );
   }
