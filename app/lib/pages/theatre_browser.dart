@@ -11,7 +11,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-Future<Position> _determinePosition() async {
+Future<LatLng> _determinePosition() async {
   bool serviceEnabled;
   LocationPermission permission;
 
@@ -45,7 +45,8 @@ Future<Position> _determinePosition() async {
 
   // When we reach here, permissions are granted and we can
   // continue accessing the position of the device.
-  return await Geolocator.getCurrentPosition();
+  Position res = await Geolocator.getCurrentPosition();
+  return LatLng(res.latitude, res.longitude);
 }
 
 CancelableOperation<T> _debounceFuture<T>(
@@ -82,7 +83,7 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
   CarouselController movieCarouselController = CarouselController();
   MapController mapController = MapController();
 
-  Future<Position>? location;
+  Future<LatLng?>? location;
 
   Future<List<TheatreScreeningEvent>?> _fetchScreenings(
       String theatreId, DateTime chosenDate) async {
@@ -91,9 +92,9 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
             endDate: chosenDate.add(const Duration(days: 1)));
   }
 
-  Future<List<ExtendedTheatre>?> _fetchNearbyTheatres(Position location) async {
+  Future<List<ExtendedTheatre>?> _fetchNearbyTheatres(LatLng location) async {
     return HandlerstheatreApi(ApiClient(basePath: baseApiPath))
-        .getNearby(location.latitude, location.longitude);
+        .getNearby(location.longitude, location.latitude);
   }
 
   Future<List<ExtendedTheatre>?> _queryTheatresByName(String name) {
@@ -105,6 +106,15 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
   void initState() {
     super.initState();
     location = _determinePosition();
+
+    () async {
+      var res = await location;
+      if (res != null) {
+        setState(() {
+          nearbyTheatres = _fetchNearbyTheatres(res);
+        });
+      }
+    }();
   }
 
   @override
@@ -118,70 +128,60 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
     return Padding(padding: const EdgeInsets.all(10), child: child);
   }
 
-  Widget _theatresGrid(BuildContext context, List<ExtendedTheatre> list) {
-    var messenger = ScaffoldMessenger.of(context);
-
-    return GridView.count(
-        crossAxisCount: 2,
-        children: list
-            .map((e) => GestureDetector(
-                onLongPress: () {
-                  var data =
-                      ClipboardData(text: "${e.locationLon}, ${e.locationLat}");
-                  Clipboard.setData(data);
-
-                  messenger.clearSnackBars();
-                  messenger.showSnackBar(const SnackBar(
-                      content: Text("Copied location to clipboard!")));
-                },
-                onTap: () {
-                  setState(() {
-                    chosenTheatre = e;
-                    screeningTimeline =
-                        _fetchScreenings(chosenTheatre!.id, DateTime.now());
-                  });
-                },
-                child: Card(
-                    color: Colors.grey[900],
-                    child: Column(children: [
-                      ListTile(title: Text(e.name)),
-                      ListTile(
-                          leading: const Icon(Icons.airplane_ticket),
-                          title:
-                              Text("${e.ticketsCount.toString()} ticket(s)")),
-                      ListTile(
-                          leading: const Icon(Icons.room),
-                          title: Text("${e.hallsCount} hall(s)")),
-                      ListTile(
-                          leading: const Icon(Icons.local_movies),
-                          title: Text("${e.screeningsCount} screening(s)"))
-                    ]))))
-            .toList());
+  Widget _theatreMarkers(BuildContext context, List<ExtendedTheatre>? list) {
+    return MarkerLayer(
+      markers: list != null
+          ? list
+              .map((e) => Marker(
+                  anchorPos: AnchorPos.align(AnchorAlign.bottom),
+                  point: LatLng(e.locationLat, e.locationLon),
+                  builder: (ctx) => GestureDetector(
+                      onTap: () => setState(() {
+                            chosenTheatre = e;
+                          }),
+                      child: const Icon(Icons.location_on, color: Colors.red))))
+              .toList()
+          : [],
+    );
   }
 
-  Widget _theatreView(BuildContext context, Position location) {
-    return FlutterMap(
-      options: MapOptions(
-        center: LatLng(location.latitude, location.longitude),
-        zoom: 9.2,
-      ),
-      nonRotatedChildren: [
-        RichAttributionWidget(
-          attributions: [
-            TextSourceAttribution(
-              'OpenStreetMap contributors',
-              onTap: () =>
-                  launchUrl(Uri.parse('https://openstreetmap.org/copyright')),
+  Widget _theatreView(LatLng? location) {
+    return FutureBuilder<List<ExtendedTheatre>?>(
+        future: searchTheatres?.value ?? nearbyTheatres,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                children: [
+                  const Icon(Icons.location_disabled),
+                  Center(child: Text(snapshot.error.toString()))
+                ],
+              ),
+            );
+          }
+          return FlutterMap(
+            options: MapOptions(
+              center: location,
             ),
-          ],
-        ),
-      ],
-      children: [
-        TileLayer(
-          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-        ),
-      ],
-    );
+            nonRotatedChildren: [
+              RichAttributionWidget(
+                attributions: [
+                  TextSourceAttribution(
+                    'OpenStreetMap contributors',
+                    onTap: () => launchUrl(
+                        Uri.parse('https://openstreetmap.org/copyright')),
+                  ),
+                ],
+              ),
+            ],
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              ),
+              _theatreMarkers(context, snapshot.data)
+            ],
+          );
+        });
   }
 
   Widget _screeningInfo(
@@ -310,10 +310,11 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
     );
   }
 
-  Future<Position?> _showMapPopup(BuildContext context) async {
+  Future<LatLng?> _showMapPopup() async {
     var size = MediaQuery.of(context).size;
+    var controller = MapController();
 
-    return showDialog<Position>(
+    return showDialog<LatLng>(
       context: context,
       barrierDismissible: false, // user must tap button!
       builder: (BuildContext context) {
@@ -322,9 +323,8 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
           content: SizedBox.fromSize(
               size: Size(size.width - 30, size.height - 30),
               child: FlutterMap(
-                options: MapOptions(
-                  zoom: 9.2,
-                ),
+                mapController: controller,
+                options: MapOptions(),
                 nonRotatedChildren: [
                   RichAttributionWidget(
                     attributions: [
@@ -341,23 +341,13 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
                     urlTemplate:
                         'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   ),
-                  MarkerLayer(
-                    markers: [
-                      Marker(
-                        point: LatLng(30, 40),
-                        width: 80,
-                        height: 80,
-                        builder: (context) => FlutterLogo(),
-                      ),
-                    ],
-                  ),
                 ],
               )),
           actions: <Widget>[
             TextButton(
               child: const Text('Pick'),
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(context).pop(controller.center);
               },
             ),
           ],
@@ -369,20 +359,58 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
   @override
   Widget build(BuildContext context) {
     if (chosenTheatre == null) {
-      return FutureBuilder(
-        future: location,
-        builder: (context, snapshot) {
-          if (snapshot.hasData && snapshot.data != null) {
-            return _theatreView(context, snapshot.data!);
-          } else {
-            WidgetsBinding.instance.addPostFrameCallback((timeStamp) {
-              _showMapPopup(context);
-            });
-            return Container();
-          }
-        },
-      );
-      // return _theatreView(context);
+      return Stack(children: [
+        FutureBuilder(
+            future: location,
+            builder: (context, snapshot) {
+              if (snapshot.hasError) {
+                WidgetsBinding.instance.addPostFrameCallback((timeStamp) async {
+                  var res = await _showMapPopup();
+
+                  // pain. useEffect exists for a reason.
+                  setState(() {
+                    location = Future.value(res);
+
+                    () async {
+                      var res = await location;
+                      setState(() {
+                        if (res != null) {
+                          nearbyTheatres = _fetchNearbyTheatres(res);
+                        } else {
+                          nearbyTheatres = null;
+                        }
+                      });
+                    }();
+                  });
+                });
+              }
+              return _theatreView(snapshot.data);
+            }),
+        _widgetWithPadding(TextField(
+          onChanged: (value) {
+            if (searchTheatres != null) {
+              setState(() {
+                searchTheatres!.cancel();
+              });
+            }
+
+            if (value.isEmpty) {
+              setState(() {
+                searchTheatres = null;
+              });
+            } else {
+              setState(() {
+                searchTheatres = _debounceFuture(
+                    () => _queryTheatresByName(value), List.empty());
+              });
+            }
+          },
+          decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              filled: true,
+              label: Text("Search theatres")),
+        )),
+      ]);
     } else {
       return _screeningView(context);
     }

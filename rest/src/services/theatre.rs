@@ -439,6 +439,7 @@ impl TheatreResource {
                 movies::poster_image_url,
             ))
             .filter(theatre_screenings::starting_time.gt(start_date))
+            .order(theatre_screenings::starting_time)
             .into_boxed();
 
         if let Some(end_date) = end_date {
