@@ -47,6 +47,10 @@ dependencies:
   geolocator: ^9.0.2
   async: ^2.11.0
   date_picker_timeline: ^1.2.3
+  intl: ^0.18.0
+  flutter_map: ^4.0.0
+  latlong2: ^0.8.2
+  url_launcher: ^6.1.11
 
 dev_dependencies:
   flutter_test:
