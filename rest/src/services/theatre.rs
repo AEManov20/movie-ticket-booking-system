@@ -433,8 +433,10 @@ impl TheatreResource {
                 movies::id,
                 theatre_screenings::id,
                 theatre_screenings::starting_time,
+                halls::name,
                 movies::length,
                 movies::name,
+                movies::poster_image_url,
             ))
             .filter(theatre_screenings::starting_time.gt(start_date))
             .into_boxed();

@@ -201,8 +201,10 @@ pub struct TheatreScreeningEvent {
     pub movie_id: uuid::Uuid,
     pub theatre_screening_id: uuid::Uuid,
     pub starting_time: chrono::NaiveDateTime,
+    pub hall_name: String,
     pub length: f64,
     pub movie_name: String,
+    pub movie_poster_url: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]

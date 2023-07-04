@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:internship_app/main.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:intl/intl.dart';
 
 Future<Position> _determinePosition() async {
   bool serviceEnabled;
@@ -44,6 +45,22 @@ Future<Position> _determinePosition() async {
   return await Geolocator.getCurrentPosition();
 }
 
+CancelableOperation<T> _debounceFuture<T>(
+    Future<T> Function() callback, T cancelValue,
+    [Duration delay = const Duration(milliseconds: 350)]) {
+  var cancelled = false;
+  return CancelableOperation.fromFuture(() async {
+    await Future.delayed(delay);
+    if (cancelled) {
+      return cancelValue;
+    } else {
+      return await callback();
+    }
+  }(), onCancel: () {
+    cancelled = true;
+  });
+}
+
 class TheatreBrowserPage extends StatefulWidget {
   const TheatreBrowserPage({super.key});
 
@@ -53,7 +70,7 @@ class TheatreBrowserPage extends StatefulWidget {
 
 class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
   ExtendedTheatre? chosenTheatre;
-  DateTime? chosenDate;
+  int selectedScreeningIndex = 0;
 
   CancelableOperation<List<ExtendedTheatre>?>? searchTheatres;
   Future<List<ExtendedTheatre>?>? nearbyTheatres;
@@ -63,9 +80,10 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
   CarouselController dateCarouselController = CarouselController();
 
   Future<List<TheatreScreeningEvent>?> _fetchScreenings(
-      String theatreId) async {
+      String theatreId, DateTime chosenDate) async {
     return HandlerstheatrescreeningApi(ApiClient(basePath: baseApiPath))
-        .getTimeline(theatreId, DateTime.now());
+        .getTimeline(theatreId, chosenDate,
+            endDate: chosenDate.add(const Duration(days: 1)));
   }
 
   Future<List<ExtendedTheatre>?> _fetchNearbyTheatres() async {
@@ -84,30 +102,6 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
     super.initState();
 
     nearbyTheatres = _fetchNearbyTheatres();
-  }
-
-  @override
-  void didUpdateWidget(covariant TheatreBrowserPage oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // if (chosenTheatreId != null && chosenTheatreDidUpdate) {
-    //   if (chosenDate != null) {
-    //     HandlerstheatrescreeningApi(ApiClient(basePath: baseApiPath))
-    //         .getTimeline(chosenTheatreId!, chosenDate!)
-    //         .then(print)
-    //         .onError((error, stackTrace) {
-    //       print(error);
-    //       print(stackTrace);
-    //     });
-    //   } else {
-    //     HandlerstheatrescreeningApi(ApiClient(basePath: baseApiPath))
-    //         .getTimeline(chosenTheatreId!, DateTime.now())
-    //         .then(print)
-    //         .onError((error, stackTrace) {
-    //       print(error);
-    //       print(stackTrace);
-    //     });
-    //   }
-    // }
   }
 
   Widget _widgetWithPadding(Widget child) {
@@ -133,7 +127,8 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
                 onTap: () {
                   setState(() {
                     chosenTheatre = e;
-                    screeningTimeline = _fetchScreenings(chosenTheatre!.id);
+                    screeningTimeline =
+                        _fetchScreenings(chosenTheatre!.id, DateTime.now());
                   });
                 },
                 child: Card(
@@ -171,16 +166,8 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
               });
             } else {
               setState(() {
-                var cancelled = false;
-
-                // debouncing magic with CancelableOperation :)
-                searchTheatres = CancelableOperation.fromFuture(() async {
-                  await Future.delayed(const Duration(milliseconds: 250));
-                  if (cancelled) return <ExtendedTheatre>[];
-                  return await _queryTheatresByName(value);
-                }(), onCancel: () {
-                  cancelled = true;
-                });
+                searchTheatres = _debounceFuture(
+                    () => _queryTheatresByName(value), List.empty());
               });
             }
           },
@@ -236,24 +223,57 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
     );
   }
 
-  Widget _screeningInfo(BuildContext context) {
+  Widget _screeningInfo(
+      BuildContext context, List<TheatreScreeningEvent>? screeningTimeline) {
+    if (screeningTimeline == null || screeningTimeline.isEmpty) {
+      return const Center(child: Text("No screenings"));
+    }
+
     return Column(
       children: [
-        _widgetWithPadding(Text("MOVIE TITLE",
-            style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold))),
+        Center(
+            child: _widgetWithPadding(Text(
+                screeningTimeline[selectedScreeningIndex].movieName,
+                style: const TextStyle(
+                    fontSize: 30, fontWeight: FontWeight.bold)))),
+        Wrap(direction: Axis.horizontal, children: [
+          const Icon(Icons.calendar_month),
+          const SizedBox(width: 5),
+          Text(DateFormat('hh:mm').format(screeningTimeline[selectedScreeningIndex].startingTime.toLocal())),
+          
+          const SizedBox(width: 50),
+          
+          const Icon(Icons.access_time),
+          const SizedBox(width: 5),
+          Text("${screeningTimeline[selectedScreeningIndex].length} min"),
+          
+          const SizedBox(width: 50),
+
+          const Icon(Icons.chair),
+          const SizedBox(width: 5),
+          Text(screeningTimeline[selectedScreeningIndex].hallName),
+        ]),
         Expanded(
             child: Padding(
-          padding: EdgeInsets.fromLTRB(0, 10, 0, 10),
+          padding: const EdgeInsets.fromLTRB(0, 10, 0, 10),
           child: CarouselSlider(
-            items: [
-              Container(
-                  decoration: BoxDecoration(
-                      color: Colors.grey[900]!,
-                      borderRadius: BorderRadius.all(Radius.circular(30))))
-            ],
+            items: screeningTimeline
+                .map((e) => e.moviePosterUrl == null
+                    ? Container(
+                        decoration: BoxDecoration(
+                            color: Colors.grey[900]!,
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(30))))
+                    : ClipRRect(
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(30)),
+                        child: Image.network(e.moviePosterUrl!,
+                            fit: BoxFit.fitHeight)))
+                .toList(),
             carouselController: movieCarouselController,
             options: CarouselOptions(
-              onPageChanged: (index, reason) => print(index),
+              onPageChanged: (index, reason) =>
+                  setState(() => selectedScreeningIndex = index),
               autoPlay: false,
               enlargeCenterPage: true,
               viewportFraction: 0.9,
@@ -292,7 +312,12 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
                 selectionColor: Colors.grey[900]!,
                 // exactly three weeks
                 daysCount: 7 * 3,
-                // i don't even know why i'm subtracting from 66
+                onDateChange: (selectedDate) => setState(() {
+                  selectedScreeningIndex = 0;
+                  screeningTimeline =
+                      _fetchScreenings(chosenTheatre!.id, selectedDate);
+                }),
+                // i don't even know why i'm subtracting by 66
                 width: (MediaQuery.of(context).size.width - 66) / 7,
                 deactivatedColor: Colors.white,
                 selectedTextColor: Colors.white,
@@ -301,7 +326,26 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
           ),
         ),
         Divider(color: Colors.grey[900]!),
-        Flexible(flex: 3, child: _screeningInfo(context))
+        Flexible(
+            flex: 3,
+            child: FutureBuilder(
+                future: screeningTimeline,
+                builder: (context, snapshot) {
+                  if (snapshot.hasData && snapshot.data != null) {
+                    return _screeningInfo(context, snapshot.data);
+                  } else if (snapshot.hasError) {
+                    return Center(
+                      child: Column(
+                        children: [
+                          const Icon(Icons.error),
+                          Center(child: Text(snapshot.error.toString()))
+                        ],
+                      ),
+                    );
+                  } else {
+                    return Container();
+                  }
+                }))
       ],
     );
   }
