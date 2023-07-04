@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:api/api.dart';
 import 'package:async/async.dart';
 import 'package:carousel_slider/carousel_slider.dart';
@@ -85,6 +87,9 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
 
   Future<LatLng?>? location;
 
+  Image? previousBg;
+  Image? currentBg;
+
   Future<List<TheatreScreeningEvent>?> _fetchScreenings(
       String theatreId, DateTime chosenDate) async {
     return HandlerstheatrescreeningApi(ApiClient(basePath: baseApiPath))
@@ -108,12 +113,14 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
     location = _determinePosition();
 
     () async {
-      var res = await location;
-      if (res != null) {
-        setState(() {
-          nearbyTheatres = _fetchNearbyTheatres(res);
-        });
-      }
+      try {
+        var res = await location;
+        if (res != null) {
+          setState(() {
+            nearbyTheatres = _fetchNearbyTheatres(res);
+          });
+        }
+      } on Exception catch (_) {}
     }();
   }
 
@@ -139,6 +146,7 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
                       onTap: () => setState(() {
                             chosenTheatre = e;
                           }),
+                      onLongPress: () => _showTheatreModalSheet(e),
                       child: const Icon(Icons.location_on, color: Colors.red))))
               .toList()
           : [],
@@ -232,8 +240,10 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
                 .toList(),
             carouselController: movieCarouselController,
             options: CarouselOptions(
-              onPageChanged: (index, reason) =>
-                  setState(() => selectedScreeningIndex = index),
+              onPageChanged: (index, reason) => setState(() {
+                previousBg = currentBg;
+                selectedScreeningIndex = index;
+              }),
               autoPlay: false,
               enlargeCenterPage: true,
               viewportFraction: 0.9,
@@ -256,7 +266,7 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
               Expanded(
                   child: _widgetWithPadding(Container(
                 decoration: BoxDecoration(
-                    color: Colors.grey[900]!,
+                    color: Colors.black,
                     borderRadius: const BorderRadius.all(Radius.circular(10))),
               ))),
               Expanded(
@@ -269,7 +279,7 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
                     const TextStyle(fontSize: 25, color: Colors.white),
                 monthTextStyle:
                     const TextStyle(fontSize: 10, color: Colors.white),
-                selectionColor: Colors.grey[900]!,
+                selectionColor: Colors.black,
                 // exactly three weeks
                 daysCount: 7 * 3,
                 onDateChange: (selectedDate) => setState(() {
@@ -285,7 +295,6 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
             ],
           ),
         ),
-        Divider(color: Colors.grey[900]!),
         Flexible(
             flex: 3,
             child: FutureBuilder(
@@ -307,6 +316,42 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
                   }
                 }))
       ],
+    );
+  }
+
+  Future<void> _showTheatreModalSheet(ExtendedTheatre theatre) {
+    return showModalBottomSheet<void>(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(5.0),
+      ),
+      builder: (BuildContext context) {
+        return Container(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              ListTile(title: Text(theatre.name)),
+              ListTile(
+                  leading: const Icon(Icons.airplane_ticket),
+                  title: Text("${theatre.ticketsCount.toString()} ticket(s)")),
+              ListTile(
+                  leading: const Icon(Icons.room),
+                  title: Text("${theatre.hallsCount} hall(s)")),
+              ListTile(
+                  leading: const Icon(Icons.local_movies),
+                  title: Text("${theatre.screeningsCount} screening(s)")),
+              GestureDetector(
+                  onTap: () => setState(() {
+                        chosenTheatre = theatre;
+                      }),
+                  child: const ListTile(
+                      leading: Icon(Icons.back_hand),
+                      title: Text("Check out screenings...")))
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -386,33 +431,66 @@ class _TheatreBrowserPageState extends State<TheatreBrowserPage> {
               }
               return _theatreView(snapshot.data);
             }),
-        _widgetWithPadding(TextField(
-          onChanged: (value) {
-            if (searchTheatres != null) {
-              setState(() {
-                searchTheatres!.cancel();
-              });
-            }
+        _widgetWithPadding(ClipRRect(
+            borderRadius: const BorderRadius.all(Radius.circular(5.0)),
+            child: TextField(
+              onChanged: (value) {
+                if (searchTheatres != null) {
+                  setState(() {
+                    searchTheatres!.cancel();
+                  });
+                }
 
-            if (value.isEmpty) {
-              setState(() {
-                searchTheatres = null;
-              });
-            } else {
-              setState(() {
-                searchTheatres = _debounceFuture(
-                    () => _queryTheatresByName(value), List.empty());
-              });
-            }
-          },
-          decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              filled: true,
-              label: Text("Search theatres")),
-        )),
+                if (value.isEmpty) {
+                  setState(() {
+                    searchTheatres = null;
+                  });
+                } else {
+                  setState(() {
+                    searchTheatres = _debounceFuture(
+                        () => _queryTheatresByName(value), List.empty());
+                  });
+                }
+              },
+              style: const TextStyle(color: Colors.black),
+              decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  fillColor: Colors.white,
+                  filled: true,
+                  labelStyle: TextStyle(color: Colors.grey),
+                  label: Text("Search theatres")),
+            ))),
       ]);
     } else {
-      return _screeningView(context);
+      return FutureBuilder(
+          future: screeningTimeline,
+          builder: (context, snapshot) {
+            if (snapshot.hasData &&
+                snapshot.data != null &&
+                snapshot.data!.isNotEmpty) {
+              try {
+                if (snapshot.data!
+                        .elementAt(selectedScreeningIndex)
+                        .moviePosterUrl !=
+                    null) {
+                  currentBg = Image.network(
+                    snapshot.data![selectedScreeningIndex].moviePosterUrl!,
+                    color: Color(0x99000000),
+                    colorBlendMode: BlendMode.darken,
+                    fit: BoxFit.cover,
+                  );
+                }
+              } on Exception catch (_) {}
+            }
+
+            return Stack(children: [
+              // Second image with animated opacity
+              SizedBox.expand(child: currentBg ?? Container()),
+              BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
+                  child: _screeningView(context)),
+            ]);
+          });
     }
   }
 }

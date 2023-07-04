@@ -251,7 +251,7 @@ class _AuthButtonsState extends State<AuthButtons> {
       onPressed: callback,
       style: ButtonStyle(
           shape: MaterialStateProperty.all(
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(3.0))),
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(5.0))),
           padding: MaterialStateProperty.all(const EdgeInsets.all(20.0))),
       child: Text(text),
     );
@@ -365,12 +365,14 @@ class ColorfulCircles extends CustomPainter {
   // initial positions - target positions
   var circlePositions = [
     for (int i = 0; i < 3; i++)
-      [[Random().nextDouble(), Random().nextDouble()], [Random().nextDouble(), Random().nextDouble()]]
+      [
+        [Random().nextDouble(), Random().nextDouble()],
+        [Random().nextDouble(), Random().nextDouble()]
+      ]
   ];
 
   var circleFlags = [
-    for (int i = 0; i < 3; i++)
-      [Random().nextBool(), Random().nextBool()]
+    for (int i = 0; i < 3; i++) [Random().nextBool(), Random().nextBool()]
   ];
 
   @override
