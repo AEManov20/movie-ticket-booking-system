@@ -2,11 +2,12 @@ use std::collections::HashMap;
 
 use rayon::prelude::*;
 
-use utoipa::{ToSchema, IntoParams};
+use utoipa::{IntoParams, ToSchema};
 
 use crate::{
+    check_roles_or,
     model::{Role, UserTheatreRole},
-    services::{bridge_role::BridgeRoleService, role::RoleService}, check_roles_or, doc,
+    services::{bridge_role::BridgeRoleService, role::RoleService},
 };
 
 use super::*;
@@ -29,7 +30,7 @@ pub struct BridgeRoleQuery {
 #[get("/available")]
 pub async fn get_all_roles(
     role_service: web::Data<RoleService>,
-) -> Result<HashMap<String, uuid::Uuid>> {
+) -> HandlerResult<HashMap<String, uuid::Uuid>> {
     Ok(role_service
         .get_all_roles()
         .await?
@@ -62,7 +63,7 @@ pub async fn query_bridge_roles(
     bridge_role_service: web::Data<BridgeRoleService>,
     user_service: web::Data<UserService>,
     claims: JwtClaims,
-) -> Result<Vec<UserTheatreRole>> {
+) -> HandlerResult<Vec<UserTheatreRole>> {
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
 
     if !user.is_super_user {

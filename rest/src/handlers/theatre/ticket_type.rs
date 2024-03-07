@@ -18,9 +18,9 @@ use super::*;
 pub async fn get_all_ticket_types(
     path: web::Path<uuid::Uuid>,
     theatre_service: web::Data<TheatreService>,
-) -> Result<Vec<TicketType>> {
+) -> HandlerResult<Vec<TicketType>> {
     let Some(theatre_res) = theatre_service.get_by_id(path.into_inner()).await? else {
-        return Err(ErrorType::NotFound)
+        return Err(ErrorType::NotFound);
     };
 
     Ok(theatre_res.get_ticket_types().await?.into())
@@ -54,11 +54,11 @@ pub async fn create_ticket_type(
     role_service: web::Data<RoleService>,
     bridge_role_service: web::Data<BridgeRoleService>,
     claims: JwtClaims,
-) -> Result<TicketType> {
+) -> HandlerResult<TicketType> {
     let theatre_id = path.into_inner();
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let Some(theatre_res) = theatre_service.get_by_id(theatre_id).await? else {
-        return Err(ErrorType::NotFound)
+        return Err(ErrorType::NotFound);
     };
 
     if !user.is_super_user {
@@ -103,11 +103,11 @@ pub async fn delete_ticket_type(
     role_service: web::Data<RoleService>,
     bridge_role_service: web::Data<BridgeRoleService>,
     claims: JwtClaims,
-) -> Result<()> {
+) -> HandlerResult<()> {
     let (theatre_id, ticket_type_id) = path.into_inner();
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let Some(theatre_res) = theatre_service.get_by_id(theatre_id).await? else {
-        return Err(ErrorType::NotFound)
+        return Err(ErrorType::NotFound);
     };
 
     if !user.is_super_user {

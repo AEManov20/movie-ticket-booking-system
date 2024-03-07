@@ -3,9 +3,8 @@ use utoipa::{IntoParams, ToSchema};
 use super::*;
 
 use crate::{
-    doc,
     model::{
-        ExtendedUserReview, FormMovie, FormMovieReview, JwtClaims, Movie, MovieReview, Theatre,
+        ExtendedUserReview, FormMovie, FormMovieReview, JwtClaims, Movie, MovieReview,
         UpdateMovieReview,
     },
     services::{movie::MovieService, user::UserService, SortBy},
@@ -48,7 +47,7 @@ pub async fn submit_new_review(
     new_review: web::Json<FormMovieReview>,
     user_service: web::Data<UserService>,
     claims: JwtClaims,
-) -> Result<MovieReview> {
+) -> HandlerResult<MovieReview> {
     new_review.validate()?;
 
     let (user_res, _) = user_res_from_jwt(&claims, &user_service).await?;
@@ -90,10 +89,10 @@ pub async fn update_review_by_id(
     movie_service: web::Data<MovieService>,
     user_service: web::Data<UserService>,
     claims: JwtClaims,
-) -> Result<MovieReview> {
+) -> HandlerResult<MovieReview> {
     let (user_res, user) = user_res_from_jwt(&claims, &user_service).await?;
     let Some(review) = movie_service.get_review_by_id(path.0).await? else {
-        return Err(ErrorType::NotFound)
+        return Err(ErrorType::NotFound);
     };
 
     if review.author_user_id == user.id {
@@ -132,7 +131,7 @@ pub async fn update_review_by_id(
 pub async fn get_review_by_id(
     path: web::Path<(uuid::Uuid,)>,
     movie_service: web::Data<MovieService>,
-) -> Result<MovieReview> {
+) -> HandlerResult<MovieReview> {
     match movie_service.get_review_by_id(path.0).await? {
         Some(v) => Ok(v.into()),
         None => Err(ErrorType::NotFound),
@@ -159,10 +158,10 @@ pub async fn delete_review_by_id(
     user_service: web::Data<UserService>,
     movie_service: web::Data<MovieService>,
     claims: JwtClaims,
-) -> Result<()> {
+) -> HandlerResult<()> {
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let Some(review) = movie_service.get_review_by_id(path.0).await? else {
-        return Err(ErrorType::NotFound)
+        return Err(ErrorType::NotFound);
     };
 
     if review.author_user_id == user.id {
@@ -191,7 +190,7 @@ pub async fn get_reviews(
     path: web::Path<(uuid::Uuid,)>,
     query: web::Query<MovieReviewQuery>,
     movie_service: web::Data<MovieService>,
-) -> Result<Vec<ExtendedUserReview>> {
+) -> HandlerResult<Vec<ExtendedUserReview>> {
     query.validate()?;
 
     Ok(movie_service
@@ -216,7 +215,7 @@ pub async fn get_reviews(
 pub async fn query_movies(
     query: web::Query<MovieQuery>,
     movie_service: web::Data<MovieService>,
-) -> Result<Vec<Movie>> {
+) -> HandlerResult<Vec<Movie>> {
     query.validate()?;
 
     Ok(movie_service
@@ -238,7 +237,7 @@ pub async fn query_movies(
 pub async fn get_movie_by_id(
     path: web::Path<(uuid::Uuid,)>,
     movie_service: web::Data<MovieService>,
-) -> Result<Movie> {
+) -> HandlerResult<Movie> {
     match movie_service.get_by_id(path.0).await? {
         Some(v) => {
             if !v.is_deleted {
@@ -271,7 +270,7 @@ pub async fn delete_movie_by_id(
     movie_service: web::Data<MovieService>,
     user_service: web::Data<UserService>,
     claims: JwtClaims,
-) -> Result<()> {
+) -> HandlerResult<()> {
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
 
     if user.is_super_user {
@@ -302,7 +301,7 @@ pub async fn create_movie(
     movie_service: web::Data<MovieService>,
     user_service: web::Data<UserService>,
     claims: JwtClaims,
-) -> Result<Movie> {
+) -> HandlerResult<Movie> {
     movie.validate()?;
 
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;

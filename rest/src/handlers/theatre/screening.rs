@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use chrono::{Datelike, Utc, NaiveTime};
+use chrono::{Datelike, NaiveTime, Utc};
 use utoipa::IntoParams;
 use validator::ValidationError;
 
@@ -51,24 +51,24 @@ pub async fn get_timeline(
     path: web::Path<(uuid::Uuid,)>,
     query: web::Query<TimelineQuery>,
     theatre_service: web::Data<TheatreService>,
-) -> Result<Vec<TheatreScreeningEvent>> {
+) -> HandlerResult<Vec<TheatreScreeningEvent>> {
     let query = query.into_inner();
     validate_timeline_query(&query)?;
 
     let theatre_id = path.0;
     let Some(theatre_res) = theatre_service.get_by_id(theatre_id).await? else {
-        return Err(ErrorType::NotFound)
+        return Err(ErrorType::NotFound);
     };
 
     let Some(null_time) = NaiveTime::from_hms_opt(0, 0, 0) else {
-        return Err(ErrorType::ServerError)
+        return Err(ErrorType::ServerError);
     };
 
     Ok(theatre_res
         .query_screening_events(
             query.start_date.date_naive().and_time(null_time),
             query.end_date.map(|x| x.date_naive().and_time(null_time)),
-            None
+            None,
         )
         .await?
         .into())
@@ -91,10 +91,10 @@ pub async fn get_timeline(
 pub async fn get_theatre_screening(
     path: web::Path<(uuid::Uuid, uuid::Uuid)>,
     theatre_service: web::Data<TheatreService>,
-) -> Result<TheatreScreening> {
+) -> HandlerResult<TheatreScreening> {
     let (theatre_id, theatre_screening_id) = path.into_inner();
     let Some(theatre_res) = theatre_service.get_by_id(theatre_id).await? else {
-        return Err(ErrorType::NotFound)
+        return Err(ErrorType::NotFound);
     };
 
     match theatre_res
@@ -135,13 +135,13 @@ pub async fn update_theatre_screening(
     bridge_role_service: web::Data<BridgeRoleService>,
     role_service: web::Data<RoleService>,
     claims: JwtClaims,
-) -> Result<TheatreScreening> {
+) -> HandlerResult<TheatreScreening> {
     new_theatre_screening.validate()?;
 
     let (theatre_id, theatre_screening_id) = path.into_inner();
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let Some(theatre_res) = theatre_service.get_by_id(theatre_id).await? else {
-        return Err(ErrorType::NotFound)
+        return Err(ErrorType::NotFound);
     };
 
     if !user.is_super_user {
@@ -193,11 +193,11 @@ pub async fn delete_theatre_screening(
     bridge_role_service: web::Data<BridgeRoleService>,
     role_service: web::Data<RoleService>,
     claims: JwtClaims,
-) -> Result<()> {
+) -> HandlerResult<()> {
     let (theatre_id, theatre_screening_id) = path.into_inner();
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let Some(theatre_res) = theatre_service.get_by_id(theatre_id).await? else {
-        return Err(ErrorType::NotFound)
+        return Err(ErrorType::NotFound);
     };
 
     if !user.is_super_user {
@@ -244,13 +244,13 @@ pub async fn create_theatre_screening(
     bridge_role_service: web::Data<BridgeRoleService>,
     role_service: web::Data<RoleService>,
     claims: JwtClaims,
-) -> Result<TheatreScreening> {
+) -> HandlerResult<TheatreScreening> {
     // TODO: implement event overlap checks
 
     let theatre_id = path.into_inner();
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let Some(theatre_res) = theatre_service.get_by_id(theatre_id).await? else {
-        return Err(ErrorType::NotFound)
+        return Err(ErrorType::NotFound);
     };
 
     if !user.is_super_user {

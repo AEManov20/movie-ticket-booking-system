@@ -1,8 +1,8 @@
 use utoipa::IntoParams;
 
 use crate::{
-    check_roles_or, doc,
-    model::{FormTheatre, Point, Role, Theatre, ExtendedTheatre},
+    check_roles_or,
+    model::{ExtendedTheatre, FormTheatre, Point, Role, Theatre},
     services::{bridge_role::*, role::*, theatre::*},
 };
 
@@ -39,8 +39,8 @@ pub async fn new_theatre(
     theatre_service: web::Data<TheatreService>,
     user_service: web::Data<UserService>,
     claims: JwtClaims,
-) -> Result<Theatre> {
-    let (user_res, user) = user_res_from_jwt(&claims, &user_service).await?;
+) -> HandlerResult<Theatre> {
+    let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
 
     if !user.is_super_user {
         return Err(ErrorType::InsufficientPermission);
@@ -62,10 +62,10 @@ pub async fn new_theatre(
 pub async fn get_theatre(
     path: web::Path<(uuid::Uuid,)>,
     theatre_service: web::Data<TheatreService>,
-) -> Result<ExtendedTheatre> {
+) -> HandlerResult<ExtendedTheatre> {
     match theatre_service.get_by_id_extra(path.0).await? {
         Some(v) => Ok(v.into()),
-        None => Err(ErrorType::NotFound)
+        None => Err(ErrorType::NotFound),
     }
 }
 
@@ -94,7 +94,7 @@ pub async fn update_theatre(
     bridge_role_service: web::Data<BridgeRoleService>,
     user_service: web::Data<UserService>,
     claims: JwtClaims,
-) -> Result<Theatre> {
+) -> HandlerResult<Theatre> {
     form.validate()?;
 
     let theatre_id = path.0;
@@ -138,7 +138,7 @@ pub async fn delete_theatre(
     theatre_service: web::Data<TheatreService>,
     user_service: web::Data<UserService>,
     claims: JwtClaims,
-) -> Result<()> {
+) -> HandlerResult<()> {
     let theatre_id = path.0;
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
 
@@ -162,7 +162,7 @@ pub async fn delete_theatre(
 pub async fn get_nearby(
     theatre_service: web::Data<TheatreService>,
     location: web::Query<Point>,
-) -> Result<Vec<ExtendedTheatre>> {
+) -> HandlerResult<Vec<ExtendedTheatre>> {
     Ok(theatre_service
         .get_nearby_extended(location.into_inner())
         .await?
@@ -181,7 +181,7 @@ pub async fn get_nearby(
 pub async fn search_by_name(
     theatre_service: web::Data<TheatreService>,
     query: web::Query<TheatreSearchQuery>,
-) -> Result<Vec<ExtendedTheatre>> {
+) -> HandlerResult<Vec<ExtendedTheatre>> {
     Ok(theatre_service
         .get_by_name_extra(query.name.clone())
         .await?

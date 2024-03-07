@@ -18,10 +18,10 @@ use super::*;
 pub async fn get_halls(
     path: web::Path<uuid::Uuid>,
     theatre_service: web::Data<TheatreService>,
-) -> Result<Vec<Hall>> {
+) -> HandlerResult<Vec<Hall>> {
     let theatre_id = path.into_inner();
     let Some(theatre) = theatre_service.get_by_id(theatre_id).await? else {
-        return Err(ErrorType::NotFound)
+        return Err(ErrorType::NotFound);
     };
 
     Ok(theatre
@@ -61,13 +61,13 @@ pub async fn create_hall(
     bridge_role_service: web::Data<BridgeRoleService>,
     user_service: web::Data<UserService>,
     claims: JwtClaims,
-) -> Result<Hall> {
+) -> HandlerResult<Hall> {
     new_hall.validate()?;
 
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let theatre_id = path.into_inner();
     let Some(theatre) = theatre_service.get_by_id(theatre_id).await? else {
-        return Err(ErrorType::NotFound)
+        return Err(ErrorType::NotFound);
     };
 
     if let Err(_) = serde_json::from_value::<SeatData>(new_hall.seat_data.clone()) {
@@ -114,11 +114,11 @@ pub async fn delete_hall(
     bridge_role_service: web::Data<BridgeRoleService>,
     user_service: web::Data<UserService>,
     claims: JwtClaims,
-) -> Result<()> {
+) -> HandlerResult<()> {
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let (theatre_id, hall_id) = path.into_inner();
     let Some(theatre) = theatre_service.get_by_id(theatre_id).await? else {
-        return Err(ErrorType::NotFound)
+        return Err(ErrorType::NotFound);
     };
 
     if !user.is_super_user {

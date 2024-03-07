@@ -33,7 +33,7 @@ pub struct NewPasswordForm {
 pub async fn get_self_user(
     user_service: web::Data<UserService>,
     claims: JwtClaims,
-) -> Result<User> {
+) -> HandlerResult<User> {
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
 
     Ok(user.into())
@@ -57,7 +57,7 @@ pub async fn update_self_user(
     new_user_form: web::Json<UpdateUser>,
     user_service: web::Data<UserService>,
     claims: JwtClaims,
-) -> Result<()> {
+) -> HandlerResult<()> {
     let (mut user_res, _) = user_res_from_jwt(&claims, &user_service).await?;
 
     Ok(user_res
@@ -82,7 +82,7 @@ pub async fn update_self_user(
 pub async fn get_self_tickets(
     user_service: web::Data<UserService>,
     claims: JwtClaims,
-) -> Result<Vec<Ticket>> {
+) -> HandlerResult<Vec<Ticket>> {
     let (user_res, _) = user_res_from_jwt(&claims, &user_service).await?;
 
     Ok(user_res
@@ -111,7 +111,7 @@ pub async fn get_self_tickets(
 pub async fn get_self_reviews(
     user_service: web::Data<UserService>,
     claims: JwtClaims,
-) -> Result<Vec<ExtendedMovieReview>> {
+) -> HandlerResult<Vec<ExtendedMovieReview>> {
     let (user_res, _) = user_res_from_jwt(&claims, &user_service).await?;
 
     Ok(user_res.get_reviews().await?.into())
@@ -133,7 +133,7 @@ pub async fn get_self_roles(
     user_service: web::Data<UserService>,
     bridge_role_service: web::Data<BridgeRoleService>,
     claims: JwtClaims,
-) -> Result<Vec<UserTheatreRole>> {
+) -> HandlerResult<Vec<UserTheatreRole>> {
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     Ok(bridge_role_service
         .get_roles(Some(user.id), None, None)
@@ -160,7 +160,7 @@ pub async fn update_self_password(
     form: web::Json<NewPasswordForm>,
     user_service: web::Data<UserService>,
     claims: JwtClaims,
-) -> Result<()> {
+) -> HandlerResult<()> {
     let (mut user_res, user) = user_res_from_jwt(&claims, &user_service).await?;
 
     if let Some(hash) = user.password_hash {
@@ -192,7 +192,7 @@ pub async fn update_self_password(
 pub async fn get_partial_user(
     path: web::Path<uuid::Uuid>,
     user_service: web::Data<UserService>,
-) -> Result<PartialUser> {
+) -> HandlerResult<PartialUser> {
     match user_service
         .get_by_id(path.into_inner())
         .await?
@@ -217,9 +217,9 @@ pub async fn get_partial_user(
 pub async fn get_user_reviews(
     path: web::Path<uuid::Uuid>,
     user_service: web::Data<UserService>,
-) -> Result<Vec<ExtendedMovieReview>> {
+) -> HandlerResult<Vec<ExtendedMovieReview>> {
     let Some(user_res) = user_service.get_by_id(path.into_inner()).await? else {
-        return Err(ErrorType::NotFound)
+        return Err(ErrorType::NotFound);
     };
 
     Ok(user_res.get_reviews().await?.into())

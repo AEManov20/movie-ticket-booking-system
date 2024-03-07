@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{model::Language, services::language::LanguageService, doc};
+use crate::{model::Language, services::language::LanguageService};
 
 use super::*;
 
@@ -15,7 +15,7 @@ use super::*;
 #[get("/all")]
 pub async fn get_all_languages(
     language_service: web::Data<LanguageService>,
-) -> Result<HashMap<String, uuid::Uuid>> {
+) -> HandlerResult<HashMap<String, uuid::Uuid>> {
     Ok(language_service
         .get_all_languages()
         .await?
@@ -38,7 +38,7 @@ pub async fn get_all_languages(
 pub async fn get_language(
     path: web::Path<uuid::Uuid>,
     language_service: web::Data<LanguageService>,
-) -> Result<Language> {
+) -> HandlerResult<Language> {
     match language_service
         .get_language_by_id(path.into_inner())
         .await?

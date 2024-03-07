@@ -30,7 +30,7 @@ async fn validate_and_get(
     let ticket_id = TicketResource::verify_jwt(&query.ticket_jwt)?;
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let Some(theatre_res) = theatre_service.get_by_id(theatre_id).await? else {
-        return Err(ErrorType::NotFound)
+        return Err(ErrorType::NotFound);
     };
 
     if !user.is_super_user {
@@ -44,7 +44,7 @@ async fn validate_and_get(
     }
 
     let Some(ticket_res) = theatre_res.get_ticket_by_id(ticket_id).await? else {
-        return Err(ErrorType::ServerError)
+        return Err(ErrorType::ServerError);
     };
     let ticket = Ticket::from(ticket_res.clone());
 
@@ -82,13 +82,13 @@ pub async fn query_tickets(
     role_service: web::Data<RoleService>,
     bridge_role_service: web::Data<BridgeRoleService>,
     claims: JwtClaims,
-) -> Result<Vec<Ticket>> {
+) -> HandlerResult<Vec<Ticket>> {
     query.validate()?;
 
     let theatre_id = path.into_inner();
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let Some(theatre) = theatre_service.get_by_id(theatre_id).await? else {
-        return Err(ErrorType::NotFound)
+        return Err(ErrorType::NotFound);
     };
 
     if !user.is_super_user {
@@ -132,10 +132,10 @@ pub async fn create_ticket(
     role_service: web::Data<RoleService>,
     bridge_role_service: web::Data<BridgeRoleService>,
     claims: JwtClaims,
-) -> Result<Ticket> {
+) -> HandlerResult<Ticket> {
     let theatre_id = path.into_inner();
     let (issuer_user_res, issuer_user) = user_res_from_jwt(&claims, &user_service).await?;
-    
+
     if let Some(owner_id) = query.owner_id {
         if !issuer_user.is_super_user && owner_id != issuer_user.id {
             check_roles_or!(
@@ -147,7 +147,7 @@ pub async fn create_ticket(
             );
 
             let Some(receiver_user_res) = user_service.get_by_id(owner_id).await? else {
-                return Err(ErrorType::NotFound)
+                return Err(ErrorType::NotFound);
             };
 
             return Ok(Ticket::from(
@@ -203,7 +203,7 @@ pub async fn validate(
     role_service: web::Data<RoleService>,
     bridge_role_service: web::Data<BridgeRoleService>,
     claims: JwtClaims,
-) -> Result<Ticket> {
+) -> HandlerResult<Ticket> {
     Ok(validate_and_get(
         path,
         query,
@@ -245,7 +245,7 @@ pub async fn validate_and_mark(
     role_service: web::Data<RoleService>,
     bridge_role_service: web::Data<BridgeRoleService>,
     claims: JwtClaims,
-) -> Result<()> {
+) -> HandlerResult<()> {
     let (theatre_id, state) = path.into_inner();
 
     let (mut ticket_res, _) = validate_and_get(

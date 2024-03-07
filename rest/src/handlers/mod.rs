@@ -4,10 +4,7 @@ use actix_web::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use utoipa::{
-    openapi::{RefOr, Schema},
-    PartialSchema, ToResponse, ToSchema,
-};
+use utoipa::ToSchema;
 use validator::{Validate, ValidationErrors};
 
 use crate::{
@@ -44,14 +41,14 @@ pub enum ErrorType {
 
 pub struct SuccessResponse<T>(pub T);
 
-type Result<T> = std::result::Result<SuccessResponse<T>, ErrorType>;
+type HandlerResult<T> = std::result::Result<SuccessResponse<T>, ErrorType>;
 
 pub async fn user_res_from_jwt(
     claims: &JwtClaims,
     user_service: &UserService,
 ) -> std::result::Result<(UserResource, User), ErrorType> {
     let JwtType::User(user_id) = claims.dat else {
-        return Err(ErrorType::NoAuth)
+        return Err(ErrorType::NoAuth);
     };
 
     let user = user_service.get_by_id(user_id).await?;

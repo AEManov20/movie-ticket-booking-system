@@ -1,19 +1,14 @@
-use std::{str::FromStr, sync::Arc};
+use std::sync::Arc;
 
 use super::*;
 use chrono::Utc;
-use lettre::{
-    message::{header::ContentType, Mailbox},
-    Address, Message, SmtpTransport, Transport,
-};
 use tokio::sync::Mutex;
 
 use super::ErrorType;
 use crate::{
-    doc,
+    mailer::Mailer,
     model::{FormUser, JwtType, LoginUser, User},
     services::user::{LoginResponse, UserResource, UserService},
-    vars::gmail_user, mailer::Mailer,
 };
 
 use utoipa::{IntoParams, ToSchema};
@@ -43,11 +38,14 @@ pub struct EmailVerificationQuery {
 pub async fn login_user(
     params: web::Query<LoginUser>,
     user_service: web::Data<UserService>,
-) -> Result<LoginResponse> {
+) -> HandlerResult<LoginResponse> {
     params.validate()?;
 
-    let Some(user_res) = user_service.get_by_email_or_username(params.email.clone(), params.email.clone()).await? else {
-        return Err(ErrorType::Invalid)
+    let Some(user_res) = user_service
+        .get_by_email_or_username(params.email.clone(), params.email.clone())
+        .await?
+    else {
+        return Err(ErrorType::Invalid);
     };
 
     let user = User::from(user_res.clone());
@@ -57,7 +55,7 @@ pub async fn login_user(
     }
 
     let Some(password_hash) = user.password_hash else {
-        return Err(ErrorType::Conflict)
+        return Err(ErrorType::Conflict);
     };
 
     if crate::password::verify(params.password.as_bytes(), &password_hash) {
@@ -83,7 +81,7 @@ pub async fn register_user(
     user: web::Json<FormUser>,
     user_service: web::Data<UserService>,
     mailer_service: web::Data<Arc<Mutex<Mailer>>>,
-) -> Result<()> {
+) -> HandlerResult<()> {
     user.validate()?;
 
     if user_service
@@ -98,7 +96,13 @@ pub async fn register_user(
 
     let message = user.get_email_jwt_url()?;
 
-    match mailer_service.into_inner().lock().await.queue_mail(message).await {
+    match mailer_service
+        .into_inner()
+        .lock()
+        .await
+        .queue_mail(message)
+        .await
+    {
         Ok(v) => Ok(v.into()),
         Err(either::Either::Left(e)) => Err(ErrorType::Database(DatabaseError::EmailSend(e))),
         Err(either::Either::Right(_)) => Err(ErrorType::Database(DatabaseError::Other(
@@ -123,22 +127,22 @@ pub async fn register_user(
 pub async fn verify_email(
     query: web::Query<EmailVerificationQuery>,
     user_service: web::Data<UserService>,
-) -> Result<()> {
+) -> HandlerResult<()> {
     let Ok(claims) = UserResource::verify_email_jwt(&query.email_key) else {
-        return Err(ErrorType::Invalid)
+        return Err(ErrorType::Invalid);
     };
 
     let JwtType::Email(user_id) = claims.dat else {
-        return Err(ErrorType::Invalid)
+        return Err(ErrorType::Invalid);
     };
 
     let Some(time) = chrono::NaiveDateTime::from_timestamp_opt(claims.exp, 0) else {
-        return Err(ErrorType::ServerError)
+        return Err(ErrorType::ServerError);
     };
 
     if chrono::Utc::now() < chrono::DateTime::<chrono::Utc>::from_utc(time, Utc) {
         let Some(mut user_res) = user_service.get_by_id(user_id).await? else {
-            return Err(ErrorType::ServerError)
+            return Err(ErrorType::ServerError);
         };
 
         user_res.activate().await?;

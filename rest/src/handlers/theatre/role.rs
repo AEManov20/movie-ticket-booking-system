@@ -49,7 +49,7 @@ pub async fn get_all_roles_theatre(
     role_service: web::Data<RoleService>,
     user_service: web::Data<UserService>,
     claims: JwtClaims,
-) -> Result<HashMap<uuid::Uuid, uuid::Uuid>> {
+) -> HandlerResult<HashMap<uuid::Uuid, uuid::Uuid>> {
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let theatre_id = path.0;
 
@@ -99,7 +99,7 @@ pub async fn update_roles_batch(
     role_service: web::Data<RoleService>,
     user_service: web::Data<UserService>,
     claims: JwtClaims,
-) -> Result<()> {
+) -> HandlerResult<()> {
     let (_, user) = user_res_from_jwt(&claims, &user_service).await?;
     let theatre_id = path.0;
 
